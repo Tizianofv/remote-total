@@ -1,0 +1,30 @@
+{
+  "port": 8080,
+  "totalmix": {
+    "host": "127.0.0.1",
+    "port": 7001,
+    "gapMs": 15
+  },
+  "musicians": [
+    {
+      "id": "voz",
+      "name": "Voz",
+      "submix": 2,
+      "channels": [
+        { "label": "Mi micrófono", "bus": "input", "fader": 1 },
+        { "label": "Guitarra", "bus": "input", "fader": 2 },
+        { "label": "Pista / DAW", "bus": "playback", "fader": 1 }
+      ]
+    },
+    {
+      "id": "guitarra",
+      "name": "Guitarra",
+      "submix": 4,
+      "channels": [
+        { "label": "Mi guitarra", "bus": "input", "fader": 2 },
+        { "label": "Voz", "bus": "input", "fader": 1 },
+        { "label": "Pista / DAW", "bus": "playback", "fader": 1 }
+      ]
+    }
+  ]
+}
