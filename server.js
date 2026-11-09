@@ -27,7 +27,7 @@ function validateConfig(cfg) {
     ids.add(m.id);
     for (const c of m.channels) {
       if (!BUS_ADDR[c.bus]) throw new Error(`bus inválido en ${m.id}: ${c.bus}`);
-      if (!(c.fader >= 1 && c.fader <= 8)) throw new Error(`fader fuera de 1..8 en ${m.id}`);
+      if (!(c.fader >= 1 && c.fader <= 16)) throw new Error(`fader fuera de 1..16 en ${m.id}`);
     }
   }
 }
