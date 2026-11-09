@@ -35,11 +35,18 @@ validateConfig(config);
 
 // ---- Envío OSC ----
 const sock = dgram.createSocket('udp4');
+const LISTEN = process.argv.includes('--escuchar') || !!process.env.DEBUG_OSC;
 sock.on('message', (buf) => {
-  if (process.env.DEBUG_OSC) {
+  if (LISTEN) {
     try { const m = decodeMessage(buf); console.log('<-', m.address, m.args.join(' ')); } catch {}
   }
 });
+// Puerto donde TotalMix nos envía datos (su "Port outgoing"). Sirve para ver
+// qué manda TotalMix, por ejemplo los nombres de canales y mezclas.
+if (require.main === module && config.totalmix.listenPort) {
+  sock.bind(config.totalmix.listenPort, () =>
+    console.log(`Escuchando a TotalMix en el puerto ${config.totalmix.listenPort}${LISTEN ? ' (mostrando mensajes)' : ''}`));
+}
 
 function send(address, value) {
   if (DRY_RUN) { console.log('->', address, value); return Promise.resolve(); }

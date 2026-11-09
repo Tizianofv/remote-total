@@ -37,6 +37,16 @@ En la consola aparece la dirección, por ejemplo `http://192.168.1.20:8080`. Cad
 - `channels[].fader`: posición 1 a 8 dentro del **primer bloque de 8 canales** de esa fila.
 - `totalmix.gapMs`: pausa entre órdenes. Si TotalMix se salta movimientos, subir este valor.
 
+## Ver qué envía TotalMix
+
+En TotalMix (Settings → OSC) poner **Port outgoing** = `9001` (igual a `totalmix.listenPort`) y correr:
+
+```
+npm run escuchar
+```
+
+La consola muestra cada mensaje que llega de TotalMix (`<- /dirección valor`). Sirve para comprobar si TotalMix envía los nombres de canales y mezclas (por ejemplo `/1/trackname1` o `/1/labelSubmix`, según el foro de RME).
+
 ## Limitaciones conocidas
 
 - **No está probado con TotalMix real**: las direcciones OSC vienen de foros de RME, no de la tabla oficial.

@@ -3,6 +3,7 @@
   "totalmix": {
     "host": "127.0.0.1",
     "port": 7001,
+    "listenPort": 9001,
     "gapMs": 15
   },
   "musicians": [
