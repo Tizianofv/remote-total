@@ -156,7 +156,7 @@ async function showPicker() {
   history.replaceState(null, '', location.pathname);
   app.innerHTML = header() + `
     <div>
-      <h1>TU MEZCLA</h1>
+      <h1>Tu Sonido!!</h1>
       <p class="lede">Elige quién eres en la sesión</p>
     </div>
     <div class="grid" id="grid"></div>
