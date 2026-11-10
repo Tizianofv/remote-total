@@ -67,13 +67,14 @@ async function api(p, opts) {
 
 // ---- Pantalla completa ----
 // El navegador solo deja entrar con un gesto del usuario, y en el celular ese gesto llega con pointerup/click
-// (no con pointerdown del tacto). Se pide en cada toque o arrastre que termina, mientras no esté en pantalla completa
+// (no con pointerdown del tacto). Se pide en los toques que terminan hasta que una petición llega a pantalla completa (fsAutoDone); luego ya no, mientras no esté en pantalla completa
 // y el usuario no haya salido a propósito con el botón. Un intento rechazado no gasta nada: se reintenta en el siguiente toque.
 const fsSupported = !!((document.documentElement.requestFullscreen && document.fullscreenEnabled) ||
   (document.documentElement.webkitRequestFullscreen && document.webkitFullscreenEnabled));
 const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
 let fsUserExited = false; // true tras salir con el botón; vuelve a false al pulsar Completa (o al recargar)
 let fsPending = false;    // hay una petición en vuelo: no se lanza otra encima
+let fsAutoDone = false;   // true en cuanto una petición llega a pantalla completa: la entrada automática se apaga para la visita (el botón sigue)
 function fsEnter() {
   if (fsPending) return;
   try {
@@ -96,6 +97,7 @@ const FS_ENTER = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" st
 const FS_EXIT = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M9 4v5H4M9 9L3 3M15 4v5h5M15 9l6-6M9 20v-5H4M9 15l-6 6M15 20v-5h5M15 15l6 6"/></svg>';
 const fsAttrs = () => (fsEl() ? { label: 'Salir de pantalla completa', icon: FS_EXIT } : { label: 'Pantalla completa', icon: FS_ENTER });
 function fsSync() {
+  if (fsEl()) fsAutoDone = true; // ya entró: no más entrada automática en esta visita, salga como salga
   const b = $('fsbtn');
   if (!b) return;
   const a = fsAttrs();
@@ -108,7 +110,7 @@ if (fsSupported) {
   // Un toque o arrastre que termina (pointerup) y el click de respaldo (teclado, accesibilidad) piden pantalla completa.
   // Fase de captura y sin cancelar: la acción del toque sigue igual.
   const autoEnter = (e) => {
-    if (onBtn(e) || fsUserExited || fsEl()) return;
+    if (onBtn(e) || fsUserExited || fsAutoDone || fsEl()) return;
     fsEnter();
   };
   document.addEventListener('pointerup', autoEnter, { capture: true });
