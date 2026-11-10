@@ -188,6 +188,7 @@ test('arranque: pide /sendall y arma roles y faders desde lo que responde TotalM
     ]));
     await eventually(async () => assert.deepStrictEqual(await b.get('/api/mix?m=o0'), {
       id: 'o0', name: 'Batería', out: 'AN 1',
+      master: { key: 'out', label: 'Batería', sub: 'AN 1', value: null, level: null },
       channels: [
         { key: 'in-0', label: 'MIC 1', sub: 'AN 1', value: 0.5, level: -12.5 },
         { key: 'pb-0', label: 'Pista', sub: 'DAW AN 1', value: 0.25, level: null },
@@ -361,6 +362,41 @@ test('nombre de fábrica: salidas, entradas y reproducciones con nombres inventa
   } finally { b.stop(); }
 });
 
+test('fader de la salida del rol: /output/<n>/faderlin y /level/out/<n> llegan a master', async () => {
+  const b = await startBridge();
+  try {
+    await b.raw(bundle(message('/output/8/name', 'DRUMMER'), message('/output/8/stereo', 1)));
+    await b.raw(bundle(message('/output/8/faderlin', 0.5)));
+    await b.raw(bundle(message('/level/out/8', -20)));
+    await eventually(async () => assert.deepStrictEqual((await b.get('/api/mix?m=o8')).master,
+      { key: 'out', label: 'DRUMMER', sub: 'PH 9/10', value: 0.5, level: -20 }));
+  } finally { b.stop(); }
+});
+
+test('/api/set con k "out" manda /output/<n>/faderlin a la salida de ese rol, recortado a 0..1', async () => {
+  const b = await startBridge();
+  try {
+    await b.raw(bundle(message('/output/0/name', 'Piano'), message('/output/8/name', 'DRUMMER'), message('/output/8/stereo', 1)));
+    await eventually(async () => assert.strictEqual((await b.get('/api/musicians')).length, 2));
+
+    assert.strictEqual((await b.post('/api/set', { m: 'o8', k: 'out', v: 0.5 })).status, 200);
+    await eventually(() => assert.strictEqual(b.last('/output/8/faderlin').args[0], 0.5));
+
+    // otro rol: la orden va a SU salida (0), nunca a la 8
+    assert.strictEqual((await b.post('/api/set', { m: 'o0', k: 'out', v: 0.3 })).status, 200);
+    await eventually(() => assert.ok(Math.abs(b.last('/output/0/faderlin').args[0] - 0.3) < 1e-6));
+    assert.strictEqual(b.received.filter((m) => m.address === '/output/8/faderlin').length, 1);
+
+    await b.post('/api/set', { m: 'o8', k: 'out', v: 2 });
+    await eventually(() => assert.strictEqual(b.last('/output/8/faderlin').args[0], 1));
+    await b.post('/api/set', { m: 'o8', k: 'out', v: -1 });
+    await eventually(() => assert.strictEqual(b.last('/output/8/faderlin').args[0], 0));
+
+    assert.strictEqual((await b.post('/api/set', { m: 'o8', k: 'out', v: 'mucho' })).status, 400);
+    assert.strictEqual((await b.post('/api/set', { m: 'nope', k: 'out', v: 0.5 })).status, 400);
+  } finally { b.stop(); }
+});
+
 test('--dry-run: datos de ejemplo sin TotalMix', async () => {
   const app = await launch(['--dry-run'], {
     port: await freeTcpPort(), totalmix: { host: '127.0.0.1', port: 7001, listenPort: 9001 },
@@ -371,5 +407,7 @@ test('--dry-run: datos de ejemplo sin TotalMix', async () => {
     assert.strictEqual(roles.find((r) => r.id === 'o8').name, 'DRUMMER');
     const mix = await (await fetch(app.url('/api/mix?m=o8'))).json();
     assert.deepStrictEqual(mix.channels.map((c) => c.key), ['in-0', 'in-1', 'in-2', 'in-5', 'in-9', 'pb-0', 'pb-2']);
+    assert.deepStrictEqual([mix.master.label, mix.master.sub, mix.master.level], ['DRUMMER', 'PH 9/10', -28]);
+    assert.ok(Math.abs(mix.master.value - 0.8) < 1e-6);
   } finally { app.stop(); }
 });

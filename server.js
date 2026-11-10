@@ -47,6 +47,8 @@ const conNombre = (type, n) => { const name = ch[type][n]?.name; return !!name &
 let mainOut = null;
 const fader = {};                 // "in|3|8" -> faderlin 0..1
 const level = {};                 // "in|3" -> pico dB
+const outFader = {};              // 8 -> faderlin 0..1 de la salida 8 (el fader del rol)
+const outLevel = {};              // 8 -> pico dB de la salida 8
 const everActive = new Map();     // "in|3|8" -> {kind, idx, out}: activas desde el arranque
 const nodeKey = (kind, idx, out) => `${kind}|${idx}|${out}`;
 
@@ -70,6 +72,17 @@ function onOsc({ address, args }) {
   }
   if (p[0] === 'level' && (p[1] === 'in' || p[1] === 'pb') && p.length === 3 && typeof v === 'number') {
     level[`${p[1]}|${Number(p[2])}`] = v;
+    return;
+  }
+  // Fader y medidor de la salida (el fader del rol). /output/<n>/faderlin y /level/out/<n>.
+  if (p[0] === 'output' && p.length === 3 && p[2] === 'faderlin' && typeof v === 'number') {
+    const n = Number(p[1]);
+    if (Number.isInteger(n) && n >= 0) outFader[n] = Math.min(1, Math.max(0, v));
+    return;
+  }
+  if (p[0] === 'level' && p[1] === 'out' && p.length === 3 && typeof v === 'number') {
+    const n = Number(p[2]);
+    if (Number.isInteger(n) && n >= 0) outLevel[n] = v;
     return;
   }
   if (['input', 'output', 'playback'].includes(p[0]) && p.length === 3) {
@@ -121,7 +134,9 @@ function mixView(role) {
       level: level[`${kind}|${idx}`] ?? null,
     });
   }
-  return { id: role.id, name: role.name, out: role.out, channels };
+  // Fader de la salida del rol: su etiqueta de hardware sale de role.out (ej. "PH 9/10").
+  const master = { key: 'out', label: role.name, sub: role.out, value: outFader[role.n] ?? null, level: outLevel[role.n] ?? null };
+  return { id: role.id, name: role.name, out: role.out, master, channels };
 }
 
 // ---- OSC hacia TotalMix ----
@@ -139,17 +154,16 @@ function send(address, value) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Cola de faders: si un fader se mueve muchas veces, solo sale el último valor.
-const pending = new Map(); // "in|3|8" -> valor más reciente
+const pending = new Map(); // "in|3|8" o "out|8" -> {addr, v} más reciente
 let draining = false;
 async function drain() {
   if (draining) return;
   draining = true;
   try {
     while (pending.size) {
-      const [key, v] = pending.entries().next().value;
+      const [key, { addr, v }] = pending.entries().next().value;
       pending.delete(key);
-      const [kind, idx, out] = key.split('|');
-      await send(`/mix/${kind}/${idx}/${out}/faderlin`, v);
+      await send(addr, v);
       await sleep(GAP_MS);
     }
   } catch (e) {
@@ -163,7 +177,16 @@ function setFader(role, kind, idx, v) {
   const key = nodeKey(kind, idx, role.n);
   setNode(kind, idx, role.n, v);
   pending.delete(key);
-  pending.set(key, v);
+  pending.set(key, { addr: `/mix/${kind}/${idx}/${role.n}/faderlin`, v });
+  drain();
+}
+
+// Fader de la salida del rol: siempre la salida de ese rol (role.n), nunca otro número.
+function setOutFader(role, v) {
+  outFader[role.n] = v;
+  const key = `out|${role.n}`;
+  pending.delete(key);
+  pending.set(key, { addr: `/output/${role.n}/faderlin`, v });
   drain();
 }
 
@@ -204,8 +227,13 @@ const server = http.createServer((req, res) => {
       try { p = JSON.parse(body); } catch { return json(res, 400, { error: 'JSON inválido' }); }
       const role = findRole(p?.m);
       const m = typeof p?.k === 'string' ? /^(in|pb)-(\d+)$/.exec(p.k) : null;
-      if (!role || !m || typeof p.v !== 'number' || !Number.isFinite(p.v)) {
+      const isOut = p?.k === 'out';
+      if (!role || (!m && !isOut) || typeof p.v !== 'number' || !Number.isFinite(p.v)) {
         return json(res, 400, { error: 'datos inválidos' });
+      }
+      if (isOut) {
+        setOutFader(role, Math.min(1, Math.max(0, p.v)));
+        return json(res, 200, { ok: true });
       }
       const idx = Number(m[2]);
       if (hidden(TYPE[m[1]], idx) || stereoRight(TYPE[m[1]], idx) || !conNombre(TYPE[m[1]], idx)) {
@@ -253,6 +281,11 @@ function seedDemo() {
     for (const [kind, list] of Object.entries(kinds)) {
       for (const idx of list) setNode(kind, idx, Number(out), 0.6 + Math.random() * 0.2);
     }
+  }
+  // Fader y medidor de la salida de cada rol de ejemplo.
+  for (const n of [0, 1, 2, 3, 4, 5, 8, 10]) {
+    put(`/output/${n}/faderlin`, 0.7 + (n % 3) * 0.05);
+    put(`/level/out/${n}`, -20 - n);
   }
   // Medidores que se mueven: caminata aleatoria en los canales activos.
   setInterval(() => {
