@@ -189,6 +189,7 @@ async function showMix(id) {
   let keys = [];                 // claves pintadas: canales de entrada y, al final, la salida (si hay)
   let inCount = 0;               // cuántos canales de entrada hay pintados
   let visible = 3;               // canales de entrada que caben por página
+  let selKey = null;             // clave del último canal tocado o movido (recuadro rojo; nulo al entrar)
   let cur = { chs: data.channels || [], master: data.master ?? null }; // lo último recibido
   const val = new Map();         // valor 0..1 o null (lo que muestra el fader)
   const touched = new Map();     // hasta cuándo ignorar lo que llega de TotalMix (guarda de 700 ms)
@@ -224,8 +225,15 @@ async function showMix(id) {
       .then((r) => { if (err()) err().textContent = r.ok ? '' : 'El estudio no aceptó el cambio.'; })
       .catch(() => { if (err()) err().textContent = 'Sin conexión con el estudio.'; });
   };
+  // Recuadro rojo en el canal seleccionado (el último tocado o movido). Solo cambia la clase; no toca el fader.
+  const applySel = () => keys.forEach((k, i) => {
+    const s = $(`fader-${i}`)?.closest('.strip');
+    if (s) s.classList.toggle('sel', k === selKey);
+  });
+
   const change = (i, v) => {
     const k = keys[i];
+    if (selKey !== k) { selKey = k; applySel(); }
     val.set(k, Math.min(1, Math.max(0, v)));
     touched.set(k, Date.now() + 700);
     render(i);
@@ -332,6 +340,7 @@ async function showMix(id) {
     bindPager();
     const box = $('strips');
     if (box) box.scrollLeft = prev;
+    applySel();
   };
 
   // Paginado de a `visible` canales de entrada cuando hay más.
