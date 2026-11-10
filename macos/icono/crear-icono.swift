@@ -16,7 +16,9 @@ func color(_ r: CGFloat, _ g: CGFloat, _ b: CGFloat, _ a: CGFloat = 1) -> CGColo
 let rojo = color(0xeb, 0x20, 0x28)
 
 // Dibuja sobre un lienzo de 1024 unidades con el eje Y hacia abajo (como el diseño).
-func dibujar(_ ctx: CGContext, detalle: Bool) {
+func dibujar(_ ctx: CGContext, px: Int) {
+    let detalle = px >= 128
+    let conFaders = px >= 64
     // Forma de macOS: cuadro de 824 con esquinas de 22.5 % (margen de 100 a cada lado).
     let caja = CGRect(x: 100, y: 100, width: 824, height: 824)
     let forma = CGPath(roundedRect: caja, cornerWidth: 824 * 0.225, cornerHeight: 824 * 0.225, transform: nil)
@@ -49,7 +51,28 @@ func dibujar(_ ctx: CGContext, detalle: Bool) {
         ctx.fillPath()
     }
 
-    // Tres faders de consola: rieles oscuros y capuchones gris claro con estrías.
+
+    // Ondas del estudio: 8 barras rojas redondeadas, medidas en public/logo-cds.webp.
+    // Centro x (px del logo), alto (px del logo); ancho 16 px; el centro vertical es común.
+    let barrasLogo: [(CGFloat, CGFloat)] = [(7.4, 16), (53.4, 31), (99.4, 62), (145.4, 110),
+                                            (191.0, 78), (236.5, 110), (282.5, 70), (328.5, 42)]
+    let escalaOndas: CGFloat = 1.3          // 1 px del logo = 1.3 unidades del icono
+    let centroOndasX: CGFloat = 512, centroOndasY: CGFloat = 420
+    let anchoLogoCentro: CGFloat = 169.2     // centro medio de las barras en el logo
+    // En tamaños chicos la barra se engrosa para que siga viéndose (la separación se mantiene).
+    let engrosar: CGFloat = px <= 32 ? 2.2 : 1.0
+    ctx.setFillColor(rojo)
+    for (cx, alto) in barrasLogo {
+        let ancho = 16 * escalaOndas * engrosar
+        let x = centroOndasX + (cx - anchoLogoCentro) * escalaOndas - ancho / 2
+        let h = alto * escalaOndas
+        let barra = CGRect(x: x, y: centroOndasY - h / 2, width: ancho, height: h)
+        ctx.addPath(CGPath(roundedRect: barra, cornerWidth: ancho / 2, cornerHeight: ancho / 2, transform: nil))
+        ctx.fillPath()
+    }
+
+    // Tres faders de consola: rieles oscuros y capuchones gris claro con estrías (no en 16 y 32 px).
+    if conFaders {
     let xs: [CGFloat] = [430, 512, 594]
     let alturas: [CGFloat] = [650, 610, 690]
     for (x, y) in zip(xs, alturas) {
@@ -72,6 +95,7 @@ func dibujar(_ ctx: CGContext, detalle: Bool) {
             }
         }
         ctx.restoreGState()
+    }
     }
     ctx.restoreGState()
 
@@ -107,7 +131,7 @@ for (nombre, px) in tamanos {
     let k = CGFloat(px) / 1024
     ctx.translateBy(x: 0, y: CGFloat(px))
     ctx.scaleBy(x: k, y: -k)
-    dibujar(ctx, detalle: px >= 128)
+    dibujar(ctx, px: px)
     let url = URL(fileURLWithPath: outDir + "/" + nombre) as CFURL
     let destino = CGImageDestinationCreateWithURL(url, "public.png" as CFString, 1, nil)!
     CGImageDestinationAddImage(destino, ctx.makeImage()!, nil)
