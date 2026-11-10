@@ -165,7 +165,6 @@ async function showPicker() {
   history.replaceState(null, '', location.pathname);
   app.innerHTML = header() + `
     <div>
-      <p class="kicker">Caribbean Dream Studios</p>
       <h1>Tu Sonido!!</h1>
       <p class="lede">Elige quién eres en la sesión</p>
     </div>
