@@ -307,7 +307,7 @@ async function showMix(id) {
           <span id="pgtxt"></span>
           <button class="pg" id="pgr" aria-label="Más faders">›</button>
         </div>` : ''}
-        <div class="strips ${paged ? 'scroll' : ''}" id="strips" style="--n:${Math.min(chs.length, visible)}">${chs.map((c, i) => stripHtml(c, i)).join('')}
+        <div class="strips ${paged ? 'scroll' : 'fixed'}" id="strips" style="--n:${visible}">${chs.map((c, i) => stripHtml(c, i)).join('')}
         </div>`;
     const outs = master ? stripHtml(master, chs.length, 'out') : outOffHtml;
     return `<div class="rack">
