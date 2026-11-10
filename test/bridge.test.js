@@ -397,6 +397,53 @@ test('/api/set con k "out" manda /output/<n>/faderlin a la salida de ese rol, re
   } finally { b.stop(); }
 });
 
+// Flujo SSE abierto que se lee en segundo plano: text() es lo recibido hasta ahora, ended() si el servidor cerró.
+function sse(url) {
+  const ctrl = new AbortController();
+  let buf = '';
+  let ended = false;
+  fetch(url, { signal: ctrl.signal }).then(async (res) => {
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    try {
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) { ended = true; break; }
+        buf += dec.decode(value);
+      }
+    } catch { /* abortado por el test */ }
+  }).catch(() => {});
+  return { text: () => buf, ended: () => ended, stop: () => ctrl.abort() };
+}
+const lastData = (t) => {
+  const lines = t.split('\n').filter((l) => l.startsWith('data: '));
+  return lines.length ? JSON.parse(lines.at(-1).slice(6)) : null;
+};
+
+test('flujo abierto sigue el nombre de la salida: Coro, y gone cuando deja de ser rol', async () => {
+  const b = await startBridge();
+  let s = null;
+  try {
+    await b.raw(bundle(message('/output/1/name', 'Cantante')));
+    await eventually(async () => assert.ok((await b.get('/api/musicians')).some((r) => r.id === 'o1')));
+    s = sse(b.url('/api/stream?m=o1'));
+    await eventually(() => { if (lastData(s.text())?.name !== 'Cantante') throw new Error('aún no llega Cantante'); });
+
+    await b.raw(bundle(message('/output/1/name', 'Coro')));
+    await eventually(() => {
+      const d = lastData(s.text());
+      assert.strictEqual(d.name, 'Coro');
+      assert.strictEqual(d.master.label, 'Coro');
+    });
+
+    await b.raw(bundle(message('/output/1/name', 'AN 2')));
+    await eventually(() => {
+      assert.ok(s.ended(), 'el flujo sigue abierto');
+      assert.ok(s.text().includes('event: gone\ndata: {}\n\n'), 'falta el evento gone');
+    });
+  } finally { if (s) s.stop(); b.stop(); }
+});
+
 test('--dry-run: datos de ejemplo sin TotalMix', async () => {
   const app = await launch(['--dry-run'], {
     port: await freeTcpPort(), totalmix: { host: '127.0.0.1', port: 7001, listenPort: 9001 },

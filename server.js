@@ -208,11 +208,18 @@ const server = http.createServer((req, res) => {
     return json(res, 200, mixView(role));
   }
   if (req.method === 'GET' && url.pathname === '/api/stream') {
-    const role = findRole(url.searchParams.get('m'));
-    if (!role) return json(res, 404, { error: 'rol no encontrado' });
+    const id = url.searchParams.get('m');
+    if (!findRole(id)) return json(res, 404, { error: 'rol no encontrado' });
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
     let last = '';
     const t = setInterval(() => {
+      // El rol se busca en cada tick: si TotalMix renombra la salida, el flujo sigue su nombre actual.
+      const role = findRole(id);
+      if (!role) { // ya no es un rol (nombre de fábrica, principal u oculta): se avisa y se cierra
+        res.write('event: gone\ndata: {}\n\n');
+        clearInterval(t); res.end();
+        return;
+      }
       const msg = JSON.stringify(mixView(role));
       if (msg !== last) { res.write(`data: ${msg}\n\n`); last = msg; }
     }, 80);
