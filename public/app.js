@@ -29,6 +29,27 @@ const SIGNAL_DB = -60;          // por debajo de esto no hay señal: la rayita n
 const PEAK_HOLD_MS = 2000;      // cuánto se queda quieta la rayita tras un máximo
 const PEAK_FALL_DB_PER_S = 20;  // velocidad de bajada después de ese tiempo (provisional, lo decide la sala)
 const labelHtml = (c) => `<b>${esc(c.label)}</b><small>${esc(c.sub)}</small>`;
+// Si dos marcas de la escala quedan a menos de 11 px, se oculta la etiqueta de la de menor prioridad
+// (0, 60, 20, 40, 10, 6). La rayita siempre se queda.
+const SCALE_PRI = { 0: 0, 60: 1, 20: 2, 40: 3, 10: 4, 6: 5 };
+function fitScale() {
+  document.querySelectorAll('.fader').forEach((f) => {
+    const H = f.clientHeight;
+    const marks = [...f.querySelectorAll('.tick')].map((t) => {
+      const b = t.querySelector('b');
+      if (b) b.classList.remove('hid');
+      const db = Number(t.dataset.db);
+      return { b, y: 10 + dbPos(db) * (H - 20), p: SCALE_PRI[Math.abs(db)] ?? 9 };
+    });
+    marks.sort((a, c) => a.p - c.p);
+    const kept = [];
+    for (const m of marks) {
+      if (!m.b) continue;
+      if (kept.some((y) => Math.abs(y - m.y) < 11)) m.b.classList.add('hid');
+      else kept.push(m.y);
+    }
+  });
+}
 
 function store(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
 function recall(k) { try { return localStorage.getItem(k); } catch { return null; } }
@@ -278,8 +299,8 @@ async function showMix(id) {
           <div class="meter"><i id="m-${i}"></i><b class="hold" id="h-${i}"></b></div>
           <div class="fader" id="fader-${i}" tabindex="0" role="slider" aria-label="${esc(c.label)}" aria-valuemin="0" aria-valuemax="100">
             <div class="rail"></div>
-            ${[-6, -10, -20, -40, -60].map((d) => `<div class="tick" style="bottom:calc(10px + ${dbPos(d)} * (100% - 20px))"><b>${Math.abs(d)}</b></div>`).join('')}
-            <div class="tick zero" style="bottom:calc(10px + ${ZERO} * (100% - 20px))"><b>0</b></div>
+            ${[-6, -10, -20, -40, -60].map((d) => `<div class="tick" data-db="${d}" style="bottom:calc(10px + ${dbPos(d)} * (100% - 20px))"><b>${Math.abs(d)}</b></div>`).join('')}
+            <div class="tick zero" data-db="0" style="bottom:calc(10px + ${ZERO} * (100% - 20px))"><b>0</b></div>
             <div class="fill" id="fill-${i}"></div>
             <div class="cap" id="cap-${i}"></div>
           </div>
@@ -350,6 +371,7 @@ async function showMix(id) {
     const box = $('strips');
     if (box) box.scrollLeft = prev;
     applySel();
+    fitScale();
   };
 
   // Paginado de a `visible` canales de entrada cuando hay más.
@@ -378,7 +400,7 @@ async function showMix(id) {
   let rt = 0;
   const onResize = () => {
     clearTimeout(rt);
-    rt = setTimeout(() => { if (visibleNow() !== visible) mount(cur.chs, cur.master); }, 150);
+    rt = setTimeout(() => { if (visibleNow() !== visible) mount(cur.chs, cur.master); fitScale(); }, 150);
   };
   window.addEventListener('resize', onResize);
 

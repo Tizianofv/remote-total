@@ -198,8 +198,21 @@ h1 {
 
 .foot { font: 400 11px/1.4 var(--f-text); color: var(--fg-mute); text-align: center; margin: 0; }
 
+/* Mezcla, todas las vistas: la cabeza de la tira es compacta y el fader usa todo el alto que sobra.
+   El pie queda pegado abajo y no hay scroll. La altura la da el flujo (flex): al girar se recalcula sola. */
+.app.mix { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+.app.mix #body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.app.mix .rack, .app.mix .inputs { flex: 1 1 auto; min-height: 0; }
+.app.mix .strips { flex: 1 1 0; min-height: 0; }
+.app.mix .body { height: auto; min-height: 0; flex: 1 1 auto; margin-top: 0; }
+.app.mix .outs .strip.off .body { min-height: 0; }
+.app.mix .strip .label { min-height: 0; padding: 2px 2px 0; }
+.app.mix .strip .label small { margin-top: 0; }
+.app.mix .strip .peak { margin: 2px 0 0 6px; }
+.app.mix .fader .tick b.hid { display: none; }
+
 /* Celular acostado: la mezcla usa todo el ancho y las tiras caben enteras en el alto, sin scroll.
-   En vertical no cambia nada. La altura de los faders la da el flujo (flex), así que al girar se recalcula sola. */
+   Cabecera en una fila y pie oculto. */
 @media (orientation: landscape) and (max-height: 500px) {
   .app {
     max-width: none; gap: 6px;
@@ -220,10 +233,6 @@ h1 {
   .app.mix .topr { grid-column: 4; grid-row: 1; }
   .app.mix #body { grid-column: 1 / -1; grid-row: 2; min-height: 0; margin-top: 6px; display: flex; flex-direction: column; }
   .app.mix .foot { display: none; }
-  .app.mix .rack, .app.mix .inputs { flex: 1 1 auto; min-height: 0; }
-  .app.mix .strips { flex: 1 1 0; min-height: 0; }
-  .app.mix .body { height: auto; min-height: 0; flex: 1 1 auto; }
-  .app.mix .outs .strip.off .body { min-height: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) { .who { transition: none; } }
