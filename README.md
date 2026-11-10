@@ -43,9 +43,9 @@ El rol muestra el nombre que la salida tiene en TotalMix (por ejemplo "DRUMMER")
 **Nombre de fábrica** = el nombre que TotalMix pone solo, con forma de etiqueta de hardware: `AN`, `PH`, `AES` o `ADAT`, seguido opcionalmente de un número, de `número/número` o de `L/R` (por ejemplo `AN 4`, `AN 7/8`, `PH 9/10`, `AES`, `ADAT 3/4`). No distingue mayúsculas y tolera espacios. `Analog Synth`, `PHIL`, `ADATA` y `Voz 2` **no** son de fábrica.
 Una salida, entrada o reproducción con nombre de fábrica o sin nombre **no aparece en el celular**, y `/api/set` la rechaza. Para que aparezca, cambiarle el nombre en TotalMix.
 
-**Faders de un rol** = las entradas y reproducciones que el ingeniero envió a esa salida en TotalMix (su fader está arriba de -65 dB). Reglas:
-- Se muestran en el orden de TotalMix: entradas primero, luego reproducciones.
-- Un canal que estuvo activo desde que arrancó el programa **sigue en la lista aunque el músico lo baje a cero**; así no desaparece de la pantalla.
+**Faders de un rol** = **todas** las entradas y reproducciones con nombre propio, estén o no enviadas a esa salida en TotalMix. Reglas:
+- Se muestran en el orden de TotalMix: entradas primero, luego reproducciones, por número.
+- Cada fader muestra el valor que TotalMix tiene para ese canal en esa salida. Si TotalMix todavía no lo ha enviado, sale vacío; un canal enviado a -∞ sale con el fader en cero.
 - Los canales ocultos, los que no tienen nombre propio (sin nombre o de fábrica) y la pareja derecha de un estéreo no se muestran.
 - Cada fader muestra el nombre del canal en TotalMix (por ejemplo "MIC 1").
 - Cada rol tiene además el **fader de su salida** (campo `master`, por ejemplo "DRUMMER" en "PH 9/10"), con su medidor. Es el fader de la salida misma, no de un canal.

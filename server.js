@@ -49,13 +49,10 @@ const fader = {};                 // "in|3|8" -> faderlin 0..1
 const level = {};                 // "in|3" -> pico dB
 const outFader = {};              // 8 -> faderlin 0..1 de la salida 8 (el fader del rol)
 const outLevel = {};              // 8 -> pico dB de la salida 8
-const everActive = new Map();     // "in|3|8" -> {kind, idx, out}: activas desde el arranque
 const nodeKey = (kind, idx, out) => `${kind}|${idx}|${out}`;
 
 function setNode(kind, idx, out, lin) {
-  const key = nodeKey(kind, idx, out);
-  fader[key] = lin;
-  if (lin > 0) everActive.set(key, { kind, idx, out });
+  fader[nodeKey(kind, idx, out)] = lin;
 }
 
 function onOsc({ address, args }) {
@@ -116,23 +113,22 @@ function roles() {
 }
 const findRole = (id) => roles().find((r) => r.id === id);
 
-// ---- Faders de un rol: entradas y reproducciones activas en esa salida ----
+// ---- Faders de un rol: todas las entradas y reproducciones con nombre, en la mezcla de esa salida ----
 function mixView(role) {
-  const nodes = [...everActive.values()]
-    .filter((x) => x.out === role.n)
-    .sort((a, b) => (a.kind === b.kind ? a.idx - b.idx : a.kind === 'in' ? -1 : 1));
   const channels = [];
-  for (const { kind, idx } of nodes) {
+  for (const kind of ['in', 'pb']) { // entradas primero, luego reproducciones, por número
     const type = TYPE[kind];
-    if (hidden(type, idx) || stereoRight(type, idx) || !conNombre(type, idx)) continue;
-    const sub = (kind === 'pb' ? 'DAW ' : '') + channelLabel(idx, type);
-    channels.push({
-      key: `${kind}-${idx}`,
-      label: ch[type][idx].name,
-      sub,
-      value: fader[nodeKey(kind, idx, role.n)] ?? null,
-      level: level[`${kind}|${idx}`] ?? null,
-    });
+    for (const idx of Object.keys(ch[type]).map(Number).sort((a, b) => a - b)) {
+      if (hidden(type, idx) || stereoRight(type, idx) || !conNombre(type, idx)) continue;
+      const sub = (kind === 'pb' ? 'DAW ' : '') + channelLabel(idx, type);
+      channels.push({
+        key: `${kind}-${idx}`,
+        label: ch[type][idx].name,
+        sub,
+        value: fader[nodeKey(kind, idx, role.n)] ?? null,
+        level: level[`${kind}|${idx}`] ?? null,
+      });
+    }
   }
   // Fader de la salida del rol: su etiqueta de hardware sale de role.out (ej. "PH 9/10").
   const master = { key: 'out', label: role.name, sub: role.out, value: outFader[role.n] ?? null, level: outLevel[role.n] ?? null };
@@ -289,14 +285,24 @@ function seedDemo() {
       for (const idx of list) setNode(kind, idx, Number(out), 0.6 + Math.random() * 0.2);
     }
   }
+  // Los demás canales con nombre van a cero (-∞): aparecen en la mezcla, apagados.
+  for (const n of [0, 1, 2, 3, 4, 5, 8, 10]) {
+    for (const kind of ['in', 'pb']) {
+      for (const idx of Object.keys(ch[TYPE[kind]]).map(Number)) {
+        if (conNombre(TYPE[kind], idx) && fader[nodeKey(kind, idx, n)] === undefined) setNode(kind, idx, n, 0);
+      }
+    }
+  }
   // Fader y medidor de la salida de cada rol de ejemplo.
   for (const n of [0, 1, 2, 3, 4, 5, 8, 10]) {
     put(`/output/${n}/faderlin`, 0.7 + (n % 3) * 0.05);
     put(`/level/out/${n}`, -20 - n);
   }
-  // Medidores que se mueven: caminata aleatoria en los canales activos.
+  // Medidores que se mueven: caminata aleatoria en los canales encendidos (fader > 0).
   setInterval(() => {
-    for (const { kind, idx } of everActive.values()) {
+    for (const key of Object.keys(fader)) {
+      if (!(fader[key] > 0)) continue;
+      const [kind, idx] = key.split('|');
       const k = `${kind}|${idx}`;
       level[k] = Math.min(-3, Math.max(-60, (level[k] ?? -30) + (Math.random() - 0.5) * 6));
     }

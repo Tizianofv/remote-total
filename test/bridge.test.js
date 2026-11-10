@@ -191,6 +191,8 @@ test('arranque: pide /sendall y arma roles y faders desde lo que responde TotalM
       master: { key: 'out', label: 'Batería', sub: 'AN 1', value: null, level: null },
       channels: [
         { key: 'in-0', label: 'MIC 1', sub: 'AN 1', value: 0.5, level: -12.5 },
+        { key: 'in-1', label: 'MIC 2', sub: 'AN 2', value: null, level: null },
+        { key: 'in-2', label: 'PIANO', sub: 'AN 3', value: 0, level: null },
         { key: 'pb-0', label: 'Pista', sub: 'DAW AN 1', value: 0.25, level: null },
       ],
     }));
@@ -198,7 +200,10 @@ test('arranque: pide /sendall y arma roles y faders desde lo que responde TotalM
       if (!b.received.some((m) => m.address === '/sendsubmix/0' && m.args[0] === 2)) throw new Error('falta sendsubmix');
     });
     await eventually(async () => assert.deepStrictEqual((await b.get('/api/mix?m=o1')).channels, [
+      { key: 'in-0', label: 'MIC 1', sub: 'AN 1', value: null, level: -12.5 },
       { key: 'in-1', label: 'MIC 2', sub: 'AN 2', value: 0.75, level: null },
+      { key: 'in-2', label: 'PIANO', sub: 'AN 3', value: null, level: null },
+      { key: 'pb-0', label: 'Pista', sub: 'DAW AN 1', value: null, level: null },
     ]));
   } finally { b.stop(); }
 });
@@ -207,7 +212,7 @@ test('/api/set envía /mix/.../faderlin, recorta a 0..1 y el nodo queda listado 
   const b = await startBridge();
   try {
     await feedTotalMix(b);
-    await eventually(async () => assert.strictEqual((await b.get('/api/mix?m=o0')).channels.length, 2));
+    await eventually(async () => assert.strictEqual((await b.get('/api/mix?m=o0')).channels.length, 4));
 
     assert.strictEqual((await b.post('/api/set', { m: 'o0', k: 'in-0', v: 0.9 })).status, 200);
     await eventually(() => assert.ok(Math.abs(b.last('/mix/in/0/0/faderlin').args[0] - 0.9) < 1e-6));
@@ -239,7 +244,7 @@ test('flujo en vivo (SSE) entrega el mismo rol que /api/mix', async () => {
   const b = await startBridge();
   try {
     await feedTotalMix(b);
-    await eventually(async () => assert.strictEqual((await b.get('/api/mix?m=o0')).channels.length, 2));
+    await eventually(async () => assert.strictEqual((await b.get('/api/mix?m=o0')).channels.length, 4));
     const res = await fetch(b.url('/api/stream?m=o0'));
     const reader = res.body.getReader();
     const dec = new TextDecoder();
@@ -254,7 +259,7 @@ test('flujo en vivo (SSE) entrega el mismo rol que /api/mix', async () => {
     const data = JSON.parse(line.slice(6));
     assert.strictEqual(data.name, 'Batería');
     assert.strictEqual(data.out, 'AN 1');
-    assert.deepStrictEqual(data.channels.map((c) => c.key), ['in-0', 'pb-0']);
+    assert.deepStrictEqual(data.channels.map((c) => c.key), ['in-0', 'in-1', 'in-2', 'pb-0']);
   } finally { b.stop(); }
 });
 
@@ -310,7 +315,8 @@ test('captura real de TotalMix: roles exactos y la mezcla de DRUMMER sin nombres
       const mix = await b.get('/api/mix?m=o8');
       assert.deepStrictEqual(mix.channels.map((c) => [c.key, c.label, c.sub]), [
         ['in-0', 'MIC 1', 'AN 1'], ['in-1', 'MIC 2', 'AN 2'], ['in-2', 'MIC 3', 'AN 3'], ['in-3', 'MIC 4', 'AN 4'],
-        ['in-4', 'PIANO', 'AN 5'], ['in-8', 'Talk', 'AN 9'], ['in-9', 'Voz 2', 'AN 10'],
+        ['in-4', 'PIANO', 'AN 5'], ['in-5', 'DI', 'AN 6'], ['in-6', 'ROOM', 'AN 7'],
+        ['in-8', 'Talk', 'AN 9'], ['in-9', 'Voz 2', 'AN 10'],
         ['in-10', 'Voz 3', 'AN 11'], ['in-11', 'GTR Acus', 'AN 12'],
       ]);
     });
@@ -444,6 +450,24 @@ test('flujo abierto sigue el nombre de la salida: Coro, y gone cuando deja de se
   } finally { if (s) s.stop(); b.stop(); }
 });
 
+test('mezcla: todo canal con nombre sale, también en -∞; ocultos y de fábrica no; /api/set acepta el de -∞', async () => {
+  const b = await startBridge();
+  try {
+    for (const p of capturaComoPaquetes(CAPTURA)) await b.raw(p);
+    // Voz 1 con su envío a la salida 1 en cero; Voz 2 (entrada 9) oculta
+    await b.raw(bundle(message('/input/8/name', 'Voz 1'), message('/mix/in/8/1/faderlin', 0), message('/input/9/color', 0)));
+    await eventually(async () => {
+      const mix = await b.get('/api/mix?m=o1');
+      assert.deepStrictEqual(mix.channels.find((c) => c.key === 'in-8'), { key: 'in-8', label: 'Voz 1', sub: 'AN 9', value: 0, level: null });
+      assert.ok(!mix.channels.some((c) => c.key === 'in-9'), 'canal oculto salió en la mezcla');
+      assert.ok(!mix.channels.some((c) => c.key === 'in-7'), 'canal de fábrica (AN 8) salió en la mezcla');
+      assert.ok(!mix.channels.some((c) => /^(AN|PH|AES|ADAT)/i.test(c.label)), 'etiqueta de fábrica en la mezcla');
+    });
+    assert.strictEqual((await b.post('/api/set', { m: 'o1', k: 'in-8', v: 0.5 })).status, 200);
+    await eventually(() => assert.strictEqual(b.last('/mix/in/8/1/faderlin').args[0], 0.5));
+  } finally { b.stop(); }
+});
+
 test('--dry-run: datos de ejemplo sin TotalMix', async () => {
   const app = await launch(['--dry-run'], {
     port: await freeTcpPort(), totalmix: { host: '127.0.0.1', port: 7001, listenPort: 9001 },
@@ -453,7 +477,10 @@ test('--dry-run: datos de ejemplo sin TotalMix', async () => {
     assert.deepStrictEqual(roles.map((r) => r.id), ['o0', 'o1', 'o2', 'o3', 'o4', 'o5', 'o8', 'o10']);
     assert.strictEqual(roles.find((r) => r.id === 'o8').name, 'DRUMMER');
     const mix = await (await fetch(app.url('/api/mix?m=o8'))).json();
-    assert.deepStrictEqual(mix.channels.map((c) => c.key), ['in-0', 'in-1', 'in-2', 'in-5', 'in-9', 'pb-0', 'pb-2']);
+    // todos los canales con nombre (en -∞ también); ni el de fábrica (in-7) ni la pareja derecha (pb-1, pb-3)
+    assert.deepStrictEqual(mix.channels.map((c) => c.key),
+      ['in-0', 'in-1', 'in-2', 'in-3', 'in-4', 'in-5', 'in-6', 'in-8', 'in-9', 'in-10', 'in-11', 'pb-0', 'pb-2']);
+    assert.strictEqual(mix.channels.find((c) => c.key === 'in-6').value, 0);
     assert.deepStrictEqual([mix.master.label, mix.master.sub, mix.master.level], ['DRUMMER', 'PH 9/10', -28]);
     assert.ok(Math.abs(mix.master.value - 0.8) < 1e-6);
   } finally { app.stop(); }
