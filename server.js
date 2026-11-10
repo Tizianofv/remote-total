@@ -38,6 +38,11 @@ const info = (type, n) => (ch[type][n] ||= {});
 const hidden = (type, n) => ch[type][n]?.color === 0;
 const stereoRight = (type, n) => n % 2 === 1 && ch[type][n - 1]?.stereo === true;
 const TYPE = { in: 'input', pb: 'playback' };
+// Nombre de fábrica = etiqueta de hardware (AN 4, AN 7/8, PH 9/10, AES, ADAT 3, ADAT 1/2, AN L/R...).
+// Sin distinguir mayúsculas. "Analog Synth", "PHIL", "ADATA" y "Voz 2" no son de fábrica.
+const FABRICA = /^(AN|PH|AES|ADAT)(\s*(\d+(\s*\/\s*\d+)?|L(\s*\/\s*R)?|R))?$/i;
+// Un canal solo aparece en el celular si tiene nombre puesto por el ingeniero.
+const conNombre = (type, n) => { const name = ch[type][n]?.name; return !!name && !FABRICA.test(name); };
 
 let mainOut = null;
 const fader = {};                 // "in|3|8" -> faderlin 0..1
@@ -89,11 +94,10 @@ const outLabel = (n) => (ch.output[n]?.stereo ? pairLabel(n) : channelLabel(n));
 function roles() {
   const list = [];
   for (const n of Object.keys(ch.output).map(Number).sort((a, b) => a - b)) {
-    const c = ch.output[n];
-    if (!c.named) continue;
+    if (!conNombre('output', n)) continue;
     if (n === mainOut || (mainOut !== null && n === mainOut + 1 && ch.output[mainOut]?.stereo)) continue;
     if (hidden('output', n) || stereoRight('output', n)) continue;
-    list.push({ n, id: `o${n}`, name: c.name || channelLabel(n), out: outLabel(n) });
+    list.push({ n, id: `o${n}`, name: ch.output[n].name, out: outLabel(n) });
   }
   return list;
 }
@@ -107,12 +111,11 @@ function mixView(role) {
   const channels = [];
   for (const { kind, idx } of nodes) {
     const type = TYPE[kind];
-    if (hidden(type, idx) || stereoRight(type, idx)) continue;
+    if (hidden(type, idx) || stereoRight(type, idx) || !conNombre(type, idx)) continue;
     const sub = (kind === 'pb' ? 'DAW ' : '') + channelLabel(idx);
-    const name = ch[type][idx]?.name;
     channels.push({
       key: `${kind}-${idx}`,
-      label: name || sub,
+      label: ch[type][idx].name,
       sub,
       value: fader[nodeKey(kind, idx, role.n)] ?? null,
       level: level[`${kind}|${idx}`] ?? null,
@@ -205,7 +208,7 @@ const server = http.createServer((req, res) => {
         return json(res, 400, { error: 'datos inválidos' });
       }
       const idx = Number(m[2]);
-      if (hidden(TYPE[m[1]], idx) || stereoRight(TYPE[m[1]], idx)) {
+      if (hidden(TYPE[m[1]], idx) || stereoRight(TYPE[m[1]], idx) || !conNombre(TYPE[m[1]], idx)) {
         return json(res, 400, { error: 'canal no disponible' });
       }
       setFader(role, m[1], idx, Math.min(1, Math.max(0, p.v)));
@@ -227,8 +230,8 @@ const server = http.createServer((req, res) => {
 // ---- Datos de ejemplo (--dry-run): la página se puede probar sin TotalMix ----
 function seedDemo() {
   const put = (address, ...args) => onOsc({ address, args });
-  ['AN 1', 'AN 2', 'AN 3', 'AN 4', 'AN 5', 'AN 6'].forEach((s, n) => put(`/output/${n}/name`, s));
-  put('/output/6/name', 'AN 7'); put('/output/6/stereo', 1);
+  ['Piano', 'Cantante', 'Guitarra', 'Bajo', 'Coros', 'Retorno'].forEach((s, n) => put(`/output/${n}/name`, s));
+  put('/output/6/name', 'Sala'); put('/output/6/stereo', 1);
   put('/output/8/name', 'DRUMMER'); put('/output/8/stereo', 1);
   put('/output/10/name', 'Bassist'); put('/output/10/stereo', 1);
   put('/controlroom/mainout', 6);

@@ -3,10 +3,8 @@
 // Global OSC cuenta desde 0 y una pareja estéreo se nombra por su canal izquierdo
 // (tabla oficial de RME, "OSC-Commands TotalMix FX 2.1 beta 2").
 //
-// Orden supuesto en la UFX: AN 1–12, luego AES (2), luego ADAT (16).
-// AN 1–12 = 0–11 coincide con lo observado en otras UFX; las posiciones de AES y ADAT
-// son una inferencia: comprobar con `npm run escuchar`, que muestra los nombres que
-// envía TotalMix para cada número.
+// Orden medido con TotalMix real (captura de 10-nov-2026, test/fixtures/captura-real.txt):
+// AN 1–12 = 0–11, AES = 12, ADAT 1/2 = 14 … ADAT 15/16 = 28.
 
 function channelIndex(name) {
   if (typeof name === 'number') return name;

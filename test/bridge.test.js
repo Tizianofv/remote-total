@@ -281,6 +281,65 @@ test('servidor: procesa todos los mensajes de un bundle y sobrevive a paquetes r
   } finally { b.stop(); }
 });
 
+// Convierte captura-real.txt (líneas "/dirección f:valor" o 's:"texto"') en paquetes con bundles.
+function capturaComoPaquetes(file) {
+  const msgs = fs.readFileSync(file, 'utf8').split('\n').filter(Boolean).map((line) => {
+    const m = /^(\S+) (f|s):(.*)$/.exec(line);
+    assert.ok(m, `línea no reconocida: ${line}`);
+    return m[2] === 'f' ? message(m[1], Number(m[3])) : message(m[1], m[3].slice(1, -1));
+  });
+  const paquetes = [];
+  for (let i = 0; i < msgs.length; i += 10) paquetes.push(bundle(...msgs.slice(i, i + 10)));
+  return paquetes;
+}
+const CAPTURA = path.join(__dirname, 'fixtures', 'captura-real.txt');
+
+test('captura real de TotalMix: roles exactos y la mezcla de DRUMMER sin nombres de fábrica', async () => {
+  const b = await startBridge();
+  try {
+    for (const p of capturaComoPaquetes(CAPTURA)) await b.raw(p);
+    await eventually(async () => {
+      assert.deepStrictEqual(await b.get('/api/musicians'), [
+        { id: 'o0', name: 'Piano', out: 'AN 1' },
+        { id: 'o1', name: 'Cantante', out: 'AN 2' },
+        { id: 'o2', name: 'Guitarra', out: 'AN 3' },
+        { id: 'o8', name: 'DRUMMER', out: 'AN 9/10' },
+        { id: 'o10', name: 'Bassist', out: 'AN 11/12' },
+      ]);
+      const mix = await b.get('/api/mix?m=o8');
+      assert.deepStrictEqual(mix.channels.map((c) => [c.key, c.label, c.sub]), [
+        ['in-0', 'MIC 1', 'AN 1'], ['in-1', 'MIC 2', 'AN 2'], ['in-2', 'MIC 3', 'AN 3'], ['in-3', 'MIC 4', 'AN 4'],
+        ['in-4', 'PIANO', 'AN 5'], ['in-8', 'Talk', 'AN 9'], ['in-9', 'Voz 2', 'AN 10'],
+        ['in-10', 'Voz 3', 'AN 11'], ['in-11', 'GTR Acus', 'AN 12'],
+      ]);
+    });
+    // Ningún fader con nombre de fábrica (la reproducción AN/ADAT de DRUMMER queda fuera).
+    const mix = await b.get('/api/mix?m=o8');
+    for (const c of mix.channels) assert.ok(!/^(AN|PH|AES|ADAT)/i.test(c.label), c.label);
+  } finally { b.stop(); }
+});
+
+test('nombre de fábrica: salidas, entradas y reproducciones con nombres inventados', async () => {
+  const b = await startBridge();
+  try {
+    const outs = ['Analog Synth', 'PHIL', 'ADATA', 'Voz 2', 'AN', 'ph 9/10', 'aes', 'Adat 3/4'];
+    const ins = ['AN 8', 'Analog Synth', 'PHIL', 'ADATA', 'Voz 2', 'AES L/R', 'ADAT 15/16', 'PH 9/10'];
+    for (const [i, s] of outs.entries()) await b.raw(bundle(message(`/output/${i}/name`, s)));
+    await b.raw(bundle(message('/output/5/stereo', 1)));
+    for (const [i, s] of ins.entries()) await b.raw(bundle(message(`/input/${i}/name`, s)));
+    await b.raw(bundle(message('/input/8/stereo', 0))); // entrada 8 sin nombre
+    for (let i = 0; i <= 9; i++) await b.raw(bundle(message(`/mix/in/${i}/0/faderlin`, 0.5)));
+    await eventually(async () => assert.deepStrictEqual((await b.get('/api/musicians')).map((r) => r.name),
+      ['Analog Synth', 'PHIL', 'ADATA', 'Voz 2']));
+    await eventually(async () => assert.deepStrictEqual((await b.get('/api/mix?m=o0')).channels.map((c) => c.label),
+      ['Analog Synth', 'PHIL', 'ADATA', 'Voz 2']));
+    // /api/set rechaza canales de fábrica igual que un canal oculto, y acepta los de nombre propio
+    assert.strictEqual((await b.post('/api/set', { m: 'o0', k: 'in-0', v: 0.5 })).status, 400);
+    assert.strictEqual((await b.post('/api/set', { m: 'o0', k: 'in-5', v: 0.5 })).status, 400);
+    assert.strictEqual((await b.post('/api/set', { m: 'o0', k: 'in-1', v: 0.5 })).status, 200);
+  } finally { b.stop(); }
+});
+
 test('--dry-run: datos de ejemplo sin TotalMix', async () => {
   const app = await launch(['--dry-run'], {
     port: await freeTcpPort(), totalmix: { host: '127.0.0.1', port: 7001, listenPort: 9001 },

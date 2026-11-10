@@ -1,0 +1,299 @@
+/controlroom/mainout f:14
+/controlroom/mainoutb f:-1
+/input/0/color f:1
+/input/0/name s:"MIC 1"
+/input/0/stereo f:0
+/input/1/color f:1
+/input/1/name s:"MIC 2"
+/input/1/stereo f:0
+/input/10/color f:1
+/input/10/name s:"Voz 3"
+/input/10/stereo f:0
+/input/11/color f:1
+/input/11/name s:"GTR Acus"
+/input/11/stereo f:0
+/input/12/color f:1
+/input/12/name s:"AES"
+/input/12/stereo f:1
+/input/14/color f:1
+/input/14/name s:"ADAT 1/2"
+/input/14/stereo f:1
+/input/16/color f:1
+/input/16/name s:"ADAT 3/4"
+/input/16/stereo f:1
+/input/18/color f:1
+/input/18/name s:"ADAT 5/6"
+/input/18/stereo f:1
+/input/2/color f:1
+/input/2/name s:"MIC 3"
+/input/2/stereo f:0
+/input/20/color f:1
+/input/20/name s:"ADAT 7/8"
+/input/20/stereo f:1
+/input/22/color f:1
+/input/22/name s:"ADAT 9/10"
+/input/22/stereo f:1
+/input/24/color f:1
+/input/24/name s:"ADAT 11/12"
+/input/24/stereo f:1
+/input/26/color f:1
+/input/26/name s:"ADAT 13/14"
+/input/26/stereo f:1
+/input/28/color f:1
+/input/28/name s:"ADAT 15/16"
+/input/28/stereo f:1
+/input/3/color f:1
+/input/3/name s:"MIC 4"
+/input/3/stereo f:0
+/input/4/color f:1
+/input/4/name s:"PIANO"
+/input/4/stereo f:0
+/input/5/color f:1
+/input/5/name s:"DI"
+/input/5/stereo f:0
+/input/6/color f:1
+/input/6/name s:"ROOM"
+/input/6/stereo f:0
+/input/7/color f:1
+/input/7/name s:"AN 8"
+/input/7/stereo f:0
+/input/8/color f:1
+/input/8/name s:"Talk"
+/input/8/stereo f:0
+/input/9/color f:1
+/input/9/name s:"Voz 2"
+/input/9/stereo f:0
+/mix/in/0/0/faderlin f:0.8172043561935425
+/mix/in/0/1/faderlin f:0.8172043561935425
+/mix/in/0/10/faderlin f:0.8172043561935425
+/mix/in/0/2/faderlin f:0.8172043561935425
+/mix/in/0/3/faderlin f:0.6432437300682068
+/mix/in/0/4/faderlin f:0.8172043561935425
+/mix/in/0/6/faderlin f:0.7474373579025269
+/mix/in/0/8/faderlin f:0.5648956894874573
+/mix/in/1/0/faderlin f:0.8172043561935425
+/mix/in/1/1/faderlin f:0.8172043561935425
+/mix/in/1/10/faderlin f:0.9652689099311829
+/mix/in/1/2/faderlin f:0.8172043561935425
+/mix/in/1/3/faderlin f:0.8172043561935425
+/mix/in/1/4/faderlin f:0.7998387813568115
+/mix/in/1/6/faderlin f:0.7389068603515625
+/mix/in/1/8/faderlin f:0.8172043561935425
+/mix/in/10/0/faderlin f:0.8172043561935425
+/mix/in/10/1/faderlin f:0.8172043561935425
+/mix/in/10/10/faderlin f:0.8172043561935425
+/mix/in/10/2/faderlin f:0.7474373579025269
+/mix/in/10/3/faderlin f:0.6865054965019226
+/mix/in/10/4/faderlin f:0.7300716638565063
+/mix/in/10/6/faderlin f:0.7389068603515625
+/mix/in/10/8/faderlin f:0.8172043561935425
+/mix/in/11/0/faderlin f:0.5648956894874573
+/mix/in/11/1/faderlin f:0.5995358824729919
+/mix/in/11/10/faderlin f:0.5474816560745239
+/mix/in/11/2/faderlin f:0.5735254883766174
+/mix/in/11/3/faderlin f:0.6865054965019226
+/mix/in/11/4/faderlin f:0.5995358824729919
+/mix/in/11/5/faderlin f:0.617281436920166
+/mix/in/11/6/faderlin f:0.590843141078949
+/mix/in/11/8/faderlin f:0.4865001440048218
+/mix/in/2/0/faderlin f:0.8172043561935425
+/mix/in/2/1/faderlin f:0.8172043561935425
+/mix/in/2/10/faderlin f:0.8519355058670044
+/mix/in/2/2/faderlin f:0.5822519659996033
+/mix/in/2/3/faderlin f:0.7998387813568115
+/mix/in/2/4/faderlin f:0.6691398024559021
+/mix/in/2/6/faderlin f:0.7998387813568115
+/mix/in/2/8/faderlin f:0.8172043561935425
+/mix/in/3/0/faderlin f:0.8172043561935425
+/mix/in/3/1/faderlin f:0.8172043561935425
+/mix/in/3/10/faderlin f:0.8172043561935425
+/mix/in/3/2/faderlin f:0.5822519659996033
+/mix/in/3/3/faderlin f:0.6865054965019226
+/mix/in/3/4/faderlin f:0.8172043561935425
+/mix/in/3/6/faderlin f:0.8172043561935425
+/mix/in/3/8/faderlin f:0.6606093645095825
+/mix/in/4/0/faderlin f:0.8172043561935425
+/mix/in/4/1/faderlin f:0.8345699906349182
+/mix/in/4/2/faderlin f:0.590843141078949
+/mix/in/4/3/faderlin f:0.8172043561935425
+/mix/in/4/4/faderlin f:0.8172043561935425
+/mix/in/4/5/faderlin f:0.8172043561935425
+/mix/in/4/6/faderlin f:0.6865054965019226
+/mix/in/4/8/faderlin f:0.8172043561935425
+/mix/in/5/2/faderlin f:1
+/mix/in/5/5/faderlin f:0.8172043561935425
+/mix/in/6/2/faderlin f:0.8172043561935425
+/mix/in/6/6/faderlin f:0.008664009161293507
+/mix/in/7/2/faderlin f:0.5292615294456482
+/mix/in/8/0/faderlin f:0.8172043561935425
+/mix/in/8/1/faderlin f:0.8172043561935425
+/mix/in/8/10/faderlin f:0.8172043561935425
+/mix/in/8/12/faderlin f:0.8172043561935425
+/mix/in/8/14/faderlin f:0.8172043561935425
+/mix/in/8/16/faderlin f:0.8172043561935425
+/mix/in/8/18/faderlin f:0.8172043561935425
+/mix/in/8/2/faderlin f:0.8172043561935425
+/mix/in/8/20/faderlin f:0.8172043561935425
+/mix/in/8/22/faderlin f:0.8172043561935425
+/mix/in/8/24/faderlin f:0.8172043561935425
+/mix/in/8/26/faderlin f:0.8172043561935425
+/mix/in/8/28/faderlin f:0.8172043561935425
+/mix/in/8/3/faderlin f:0.8172043561935425
+/mix/in/8/4/faderlin f:0.8172043561935425
+/mix/in/8/5/faderlin f:0.8172043561935425
+/mix/in/8/6/faderlin f:0.8172043561935425
+/mix/in/8/8/faderlin f:0.8172043561935425
+/mix/in/9/0/faderlin f:0.8172043561935425
+/mix/in/9/1/faderlin f:0.8172043561935425
+/mix/in/9/10/faderlin f:0.8172043561935425
+/mix/in/9/2/faderlin f:0.7824732065200806
+/mix/in/9/3/faderlin f:0.7474373579025269
+/mix/in/9/4/faderlin f:0.6691398024559021
+/mix/in/9/6/faderlin f:0.7651075720787048
+/mix/in/9/8/faderlin f:0.8172043561935425
+/mix/pb/0/1/faderlin f:1
+/mix/pb/0/14/faderlin f:0.8172043561935425
+/mix/pb/12/12/faderlin f:0.8172043561935425
+/mix/pb/14/14/faderlin f:0.6338003873825073
+/mix/pb/14/22/faderlin f:0.8172043561935425
+/mix/pb/14/8/faderlin f:0.8172043561935425
+/mix/pb/16/16/faderlin f:0.8172043561935425
+/mix/pb/17/16/faderlin f:0.8172043561935425
+/mix/pb/18/18/faderlin f:0.8172043561935425
+/mix/pb/19/18/faderlin f:0.8172043561935425
+/mix/pb/20/20/faderlin f:0.8172043561935425
+/mix/pb/21/20/faderlin f:0.8172043561935425
+/mix/pb/22/22/faderlin f:0.8172043561935425
+/mix/pb/23/22/faderlin f:0.8172043561935425
+/mix/pb/24/24/faderlin f:0.8172043561935425
+/mix/pb/25/24/faderlin f:0.8172043561935425
+/mix/pb/26/26/faderlin f:0.8172043561935425
+/mix/pb/27/26/faderlin f:0.8172043561935425
+/mix/pb/28/28/faderlin f:0.8083691596984863
+/mix/pb/29/28/faderlin f:0.8260394930839539
+/output/0/color f:1
+/output/0/name s:"Piano"
+/output/0/stereo f:0
+/output/1/color f:1
+/output/1/name s:"Cantante"
+/output/1/stereo f:0
+/output/10/color f:1
+/output/10/name s:"Bassist"
+/output/10/stereo f:1
+/output/12/color f:1
+/output/12/name s:"AES"
+/output/12/stereo f:1
+/output/14/color f:1
+/output/14/name s:"Main"
+/output/14/stereo f:1
+/output/16/color f:1
+/output/16/name s:"ADAT 3/4"
+/output/16/stereo f:1
+/output/18/color f:1
+/output/18/name s:"ADAT 5/6"
+/output/18/stereo f:1
+/output/2/color f:1
+/output/2/name s:"Guitarra"
+/output/2/stereo f:0
+/output/20/color f:1
+/output/20/name s:"ADAT 7/8"
+/output/20/stereo f:1
+/output/22/color f:1
+/output/22/name s:"ADAT 9/10"
+/output/22/stereo f:1
+/output/24/color f:1
+/output/24/name s:"ADAT 11/12"
+/output/24/stereo f:1
+/output/26/color f:1
+/output/26/name s:"ADAT 13/14"
+/output/26/stereo f:1
+/output/28/color f:1
+/output/28/name s:"ADAT 15/16"
+/output/28/stereo f:1
+/output/3/color f:1
+/output/3/name s:"AN 4"
+/output/3/stereo f:0
+/output/4/color f:1
+/output/4/name s:"AN 5"
+/output/4/stereo f:0
+/output/5/color f:1
+/output/5/name s:"AN 6"
+/output/5/stereo f:0
+/output/6/color f:1
+/output/6/name s:"AN 7/8"
+/output/6/stereo f:1
+/output/8/color f:1
+/output/8/name s:"DRUMMER"
+/output/8/stereo f:1
+/playback/0/color f:1
+/playback/0/name s:"AN 1/2"
+/playback/0/stereo f:1
+/playback/10/color f:1
+/playback/10/name s:"PH 11/12"
+/playback/10/stereo f:1
+/playback/12/color f:1
+/playback/12/name s:"AES"
+/playback/12/stereo f:1
+/playback/14/color f:1
+/playback/14/name s:"ADAT 1/2"
+/playback/14/stereo f:1
+/playback/16/color f:1
+/playback/16/name s:"ADAT 3"
+/playback/16/stereo f:0
+/playback/17/color f:1
+/playback/17/name s:"ADAT 4"
+/playback/17/stereo f:0
+/playback/18/color f:1
+/playback/18/name s:"ADAT 5"
+/playback/18/stereo f:0
+/playback/19/color f:1
+/playback/19/name s:"ADAT 6"
+/playback/19/stereo f:0
+/playback/2/color f:1
+/playback/2/name s:"AN 3"
+/playback/2/stereo f:0
+/playback/20/color f:1
+/playback/20/name s:"ADAT 7"
+/playback/20/stereo f:0
+/playback/21/color f:1
+/playback/21/name s:"ADAT 8"
+/playback/21/stereo f:0
+/playback/22/color f:1
+/playback/22/name s:"ADAT 9"
+/playback/22/stereo f:0
+/playback/23/color f:1
+/playback/23/name s:"ADAT 10"
+/playback/23/stereo f:0
+/playback/24/color f:1
+/playback/24/name s:"ADAT 11"
+/playback/24/stereo f:0
+/playback/25/color f:1
+/playback/25/name s:"ADAT 12"
+/playback/25/stereo f:0
+/playback/26/color f:1
+/playback/26/name s:"ADAT 13"
+/playback/26/stereo f:0
+/playback/27/color f:1
+/playback/27/name s:"ADAT 14"
+/playback/27/stereo f:0
+/playback/28/color f:1
+/playback/28/name s:"ADAT 15"
+/playback/28/stereo f:0
+/playback/29/color f:1
+/playback/29/name s:"ADAT 16"
+/playback/29/stereo f:0
+/playback/3/color f:1
+/playback/3/name s:"AN 4"
+/playback/3/stereo f:0
+/playback/4/color f:1
+/playback/4/name s:"AN 5/6"
+/playback/4/stereo f:1
+/playback/6/color f:1
+/playback/6/name s:"AN 7"
+/playback/6/stereo f:0
+/playback/7/color f:1
+/playback/7/name s:"AN 8"
+/playback/7/stereo f:0
+/playback/8/color f:1
+/playback/8/name s:"PH 9/10"
+/playback/8/stereo f:1
