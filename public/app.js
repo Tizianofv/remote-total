@@ -307,7 +307,8 @@ async function showMix(id) {
             <div class="fxtrack" id="fxtrack"><div class="rail"></div><div class="lvl"></div><div class="cap" id="fxcap"></div></div>
             <span class="fxl">FX</span>
           </div>`;
-  const fxShort = (d) => (d <= FX_MIN + 0.05 ? '−∞' : String(Math.round(d) || 0).replace('-', '−'));
+  // Lectura del FX: master.fx.value con un decimal (como los faders de canal), -65 es -∞.
+  const fxShort = (d) => (d <= FX_MIN + 0.05 ? '−∞' : fmtDb(d));
   const renderFx = () => {
     const f = $('fxfader');
     if (!f) return;
