@@ -211,6 +211,28 @@ function json(res, code, body) {
   res.end(JSON.stringify(body));
 }
 
+// ---- Imágenes sueltas de public/ (por nombre: /logo-cds.webp). PUBLIC_DIR cambia la carpeta solo en las pruebas. ----
+const PUBLIC_DIR = path.resolve(process.env.PUBLIC_DIR || path.join(__dirname, 'public'));
+const IMG_TYPES = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', svg: 'image/svg+xml' };
+function notFound(res) { res.writeHead(404); res.end(); }
+function imagenPublica(res, pedido) {
+  let nombre;
+  try { nombre = decodeURIComponent(pedido); } catch { return notFound(res); }
+  if (nombre.includes('\0') || nombre.includes('\\')) return notFound(res);
+  const ext = path.extname(nombre).slice(1).toLowerCase();
+  if (!IMG_TYPES[ext]) return notFound(res);
+  const file = path.resolve(PUBLIC_DIR, nombre);
+  // Solo un archivo suelto dentro de PUBLIC_DIR: sin subcarpetas, sin "..", sin rutas absolutas.
+  if (path.dirname(file) !== PUBLIC_DIR || path.basename(file) !== nombre) return notFound(res);
+  fs.stat(file, (err, st) => {
+    if (err || !st.isFile()) return notFound(res);
+    res.writeHead(200, {
+      'Content-Type': IMG_TYPES[ext], 'Cache-Control': 'public, max-age=86400', 'X-Content-Type-Options': 'nosniff',
+    });
+    fs.createReadStream(file).on('error', () => res.destroy()).pipe(res);
+  });
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   if (req.method === 'GET' && url.pathname === '/api/musicians') {
@@ -279,6 +301,8 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
     return fs.createReadStream(path.join(__dirname, 'public', 'index.html')).pipe(res);
   }
+  const suelto = /^\/([^/]+)$/.exec(url.pathname);
+  if (req.method === 'GET' && suelto) return imagenPublica(res, suelto[1]);
   res.writeHead(404); res.end();
 });
 

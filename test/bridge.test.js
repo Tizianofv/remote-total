@@ -3,6 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 const dgram = require('node:dgram');
 const net = require('node:net');
+const http = require('node:http');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -54,11 +55,11 @@ function freeTcpPort() {
 }
 
 // Arranca server.js con un config temporal y espera a que esté listo.
-async function launch(args, cfg) {
+async function launch(args, cfg, extraEnv = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rt-'));
   const cfgPath = path.join(dir, 'config.json');
   fs.writeFileSync(cfgPath, JSON.stringify(cfg));
-  const proc = spawn(process.execPath, [SERVER, ...args], { env: { ...process.env, CONFIG: cfgPath } });
+  const proc = spawn(process.execPath, [SERVER, ...args], { env: { ...process.env, CONFIG: cfgPath, ...extraEnv } });
   let out = '';
   proc.stdout.on('data', (d) => { out += d; });
   proc.stderr.on('data', (d) => { out += d; });
@@ -490,6 +491,47 @@ test('retorno de efectos de la salida: /output/<n>/fxreturn llega a master.fx; /
 
     assert.strictEqual((await b.post('/api/set', { m: 'o8', k: 'fx', v: 'mucho' })).status, 400);
   } finally { b.stop(); }
+});
+
+// Pide una ruta tal cual, sin que el cliente la normalice ("/../x" se queda "/../x").
+function rawGet(app, reqPath) {
+  return new Promise((resolve, reject) => {
+    const req = http.get({ host: '127.0.0.1', port: app.port, path: reqPath }, (res) => {
+      const chunks = [];
+      res.on('data', (c) => chunks.push(c));
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: Buffer.concat(chunks) }));
+    });
+    req.on('error', reject);
+  });
+}
+
+test('imágenes sueltas de public/: .jpg con sus bytes; otras extensiones, rutas y ausentes → 404', async () => {
+  // PUBLIC_DIR apunta a test/fixtures/web (solo en pruebas); public/ no se toca.
+  const web = path.join(__dirname, 'fixtures', 'web');
+  const app = await launch(['--dry-run'], {
+    port: await freeTcpPort(), totalmix: { host: '127.0.0.1', port: 7001, listenPort: 9001 },
+  }, { PUBLIC_DIR: web });
+  try {
+    const ok = await rawGet(app, '/foto.jpg');
+    assert.strictEqual(ok.status, 200);
+    assert.strictEqual(ok.headers['content-type'], 'image/jpeg');
+    assert.strictEqual(ok.headers['cache-control'], 'public, max-age=86400');
+    assert.ok(ok.body.equals(fs.readFileSync(path.join(web, 'foto.jpg'))), 'los bytes no son los del archivo');
+
+    assert.strictEqual((await rawGet(app, '/nota.txt')).status, 404, 'extensión .txt servida');
+    assert.strictEqual((await rawGet(app, '/inexistente.png')).status, 404);
+
+    for (const p of [
+      '/../server.js', '/%2e%2e/server.js', '/..%2fserver.js',
+      '/..%2ffuera.png', '/%2e%2e%2ffuera.png', '/%252e%252e%252ffuera.png', '/%5c..%5cfuera.png', '/%00foto.jpg',
+    ]) {
+      const r = await rawGet(app, p);
+      assert.strictEqual(r.status, 404, p);
+      assert.strictEqual(r.body.length, 0, `${p} devolvió contenido`);
+    }
+    // después de todo lo anterior, el servidor sigue contestando
+    assert.strictEqual((await rawGet(app, '/index.html')).status, 200);
+  } finally { app.stop(); }
 });
 
 test('--dry-run: datos de ejemplo sin TotalMix', async () => {

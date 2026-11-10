@@ -52,6 +52,8 @@ Una salida, entrada o reproducción con nombre de fábrica o sin nombre **no apa
 
 Para cambiar qué escucha un músico, se cambia la mezcla en TotalMix. La página se actualiza sola.
 
+Las imágenes sueltas de `public/` (`.jpg`, `.jpeg`, `.png`, `.webp`, `.svg`) se sirven por su nombre, por ejemplo `/logo-cds.webp`. Solo archivos sueltos: sin subcarpetas ni rutas con `..`.
+
 ## Opcional: config.json
 
 No hace falta. Solo sirve para cambiar el puerto de la página o las direcciones de TotalMix. Copiar `config.example.json` a `config.json` y editar:
