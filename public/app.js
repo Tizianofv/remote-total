@@ -24,7 +24,10 @@ const dbPos = (d) => Math.min(1, Math.max(0, (d >= -6 ? (d + 26.8235294118) / 0.
 const ZERO = dbPos(0); // posición de 0 dB
 const fmtDb = (d) => (d === -Infinity ? '−∞' : (d > 0.05 ? '+' : d < -0.05 ? '−' : '') + Math.abs(d).toFixed(1));
 const levelToMeter = (db) => (db == null || !Number.isFinite(db) ? 0 : Math.min(1, Math.max(0, (db + 60) / 60)));
-const peakText = (c) => (c.level == null ? '—' : fmtDb(c.level));
+// Pico retenido (rayita del medidor y lectura de arriba). Constantes de la sala:
+const SIGNAL_DB = -60;          // por debajo de esto no hay señal: la rayita no se ve
+const PEAK_HOLD_MS = 2000;      // cuánto se queda quieta la rayita tras un máximo
+const PEAK_FALL_DB_PER_S = 20;  // velocidad de bajada después de ese tiempo (provisional, lo decide la sala)
 const labelHtml = (c) => `<b>${esc(c.label)}</b><small>${esc(c.sub)}</small>`;
 
 function store(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
@@ -136,6 +139,10 @@ async function showMix(id) {
   const target = new Map();      // nivel real 0..1
   const timers = new Map();      // envío diferido por canal
   const lastSent = new Map();
+  const holdDb = new Map();      // pico retenido por clave, dB (ausente = sin señal)
+  const holdAt = new Map();      // momento (ms) en que se fijó el último máximo
+  const instDb = new Map();      // último nivel instantáneo por clave, dB (null = sin dato)
+  const peakShown = (k) => (holdDb.get(k) == null ? '—' : fmtDb(holdDb.get(k)));
 
   const render = (i) => {
     const f = $(`fader-${i}`);
@@ -192,9 +199,9 @@ async function showMix(id) {
   const stripHtml = (c, i, extra = '') => `
       <div class="strip ${extra}">
         <div class="label" id="lab-${i}">${labelHtml(c)}</div>
-        <div class="peak" id="pk-${i}">${peakText(c)}</div>
+        <div class="peak" id="pk-${i}">${peakShown(c.key)}</div>
         <div class="body">
-          <div class="meter"><i id="m-${i}"></i></div>
+          <div class="meter"><i id="m-${i}"></i><b class="hold" id="h-${i}"></b></div>
           <div class="fader" id="fader-${i}" tabindex="0" role="slider" aria-label="${esc(c.label)}" aria-valuemin="0" aria-valuemax="100">
             <div class="rail"></div>
             ${[-6, -10, -20, -40, -60].map((d) => `<div class="tick" style="bottom:calc(10px + ${dbPos(d)} * (100% - 20px))"><b>${Math.abs(d)}</b></div>`).join('')}
@@ -242,6 +249,7 @@ async function showMix(id) {
     for (const k of [...val.keys()]) {
       if (live.has(k)) continue;
       val.delete(k); meter.delete(k); target.delete(k); touched.delete(k); lastSent.delete(k);
+      holdDb.delete(k); holdAt.delete(k); instDb.delete(k);
       clearTimeout(timers.get(k)); timers.delete(k);
     }
     all.forEach((c) => {
@@ -320,11 +328,18 @@ async function showMix(id) {
       const lab = $(`lab-${i}`);
       const html = labelHtml(c);
       if (lab && lab.innerHTML !== html) lab.innerHTML = html;
+      const k = c.key;
+      // Pico retenido: sube al máximo nuevo y, si no, espera en loop() a que pase PEAK_HOLD_MS.
+      const lv = c.level == null || !Number.isFinite(c.level) ? null : c.level;
+      instDb.set(k, lv);
+      if (lv != null && lv > SIGNAL_DB && (holdDb.get(k) == null || lv >= holdDb.get(k))) {
+        holdDb.set(k, lv);
+        holdAt.set(k, performance.now());
+      }
       const pk = $(`pk-${i}`);
-      if (pk) pk.textContent = peakText(c);
+      if (pk) pk.textContent = peakShown(k);
       const f = $(`fader-${i}`);
       if (f) f.setAttribute('aria-label', c.label ?? '');
-      const k = c.key;
       if (c.value != null && Date.now() > (touched.get(k) ?? 0) && c.value !== val.get(k)) {
         val.set(k, c.value);
         render(i);
@@ -333,7 +348,11 @@ async function showMix(id) {
   };
 
   let raf = 0;
+  let lastT = performance.now();
   const loop = () => {
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - lastT) / 1000);
+    lastT = now;
     keys.forEach((k, i) => {
       const t = target.get(k) ?? 0;
       const m = meter.get(k) ?? 0;
@@ -341,6 +360,24 @@ async function showMix(id) {
       meter.set(k, next);
       const el = $(`m-${i}`);
       if (el) { el.style.height = (next * 100).toFixed(1) + '%'; el.style.setProperty('--h', el.parentElement.clientHeight + 'px'); }
+
+      // Rayita de pico retenido: quieta PEAK_HOLD_MS, luego baja hasta el nivel actual.
+      let h = holdDb.get(k);
+      if (h != null) {
+        if (now - (holdAt.get(k) ?? 0) > PEAK_HOLD_MS) h -= PEAK_FALL_DB_PER_S * dt;
+        const cur = instDb.get(k);
+        if (cur != null && h < cur) h = cur;
+        if (h <= SIGNAL_DB) h = null;
+        if (h == null) holdDb.delete(k); else holdDb.set(k, h);
+      }
+      const hel = $(`h-${i}`);
+      if (hel) {
+        if (h == null) hel.style.display = 'none';
+        else { hel.style.display = 'block'; hel.style.bottom = `calc(${levelToMeter(h)} * 100%)`; }
+      }
+      const pk = $(`pk-${i}`);
+      const txt = peakShown(k);
+      if (pk && pk.textContent !== txt) pk.textContent = txt;
     });
     raf = requestAnimationFrame(loop);
   };

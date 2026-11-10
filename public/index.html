@@ -138,6 +138,9 @@ h1 span { color: var(--orange); }
   background: linear-gradient(to top, var(--green) 0%, var(--green) 72%, var(--yellow) 86%, var(--red) 97%);
   background-size: 100% var(--h, 300px); background-position: bottom;
 }
+/* Rayita de pico retenido: 3 px del mismo verde del medidor, a todo el ancho del pozo (medida en peakhold-drummer.png:
+   filas 190-192, x 10-13, color #19d120 igual que el relleno). Se oculta sin señal (app.js). */
+.meter .hold { position: absolute; left: 0; right: 0; height: 3px; background: var(--green); display: none; }
 /* Zona del fader: va a todo lo alto del canal (el dedo puede tocar en cualquier punto de la altura). */
 .fader { position: absolute; left: 20px; width: 44px; top: 0; bottom: 0; touch-action: none; cursor: grab; }
 .fader:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
