@@ -95,6 +95,8 @@ bash macos/build.sh
 
 Genera en `dist/`: `Remote Total.app`, `Desinstalar Remote Total.app` y `Remote Total.pkg` (el instalador). Hacen falta las Command Line Tools de Xcode (`swiftc`, `pkgbuild`, `productbuild`, `codesign`, `osacompile`) y un Node oficial arm64. Por defecto usa `../node/bin/node`; para otra ruta: `NODE_BIN=/ruta/a/node bash macos/build.sh`.
 
+Los iconos de las apps (`macos/icono/RemoteTotal.icns` y `Desinstalar.icns`) los dibuja `macos/icono/build-icono.sh` con CoreGraphics; `build.sh` lo llama y los copia a cada app.
+
 El instalador **no está firmado** (no hay certificado de desarrollador). Las apps van con firma ad-hoc.
 
 ### Instalar

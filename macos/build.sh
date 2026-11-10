@@ -20,6 +20,9 @@ VERSION="$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$ROOT/package.json" | he
 [ -n "$VERSION" ] || { echo "No pude leer la versión de package.json" >&2; exit 1; }
 echo "==> Remote Total $VERSION con $("$NODE_BIN" -v) ($NODE_BIN)"
 
+echo "==> Iconos (macos/icono)"
+bash "$MACOS_DIR/icono/build-icono.sh"
+
 rm -rf "$DIST"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources/node" "$APP/Contents/Resources/app" "$WORK"
 
@@ -43,6 +46,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <dict>
   <key>CFBundleDevelopmentRegion</key><string>es</string>
   <key>CFBundleExecutable</key><string>RemoteTotal</string>
+  <key>CFBundleIconFile</key><string>RemoteTotal</string>
   <key>CFBundleIdentifier</key><string>do.caribbeandream.remotetotal</string>
   <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
   <key>CFBundleName</key><string>Remote Total</string>
@@ -59,6 +63,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 printf 'APPL????' > "$APP/Contents/PkgInfo"
+cp "$MACOS_DIR/icono/RemoteTotal.icns" "$APP/Contents/Resources/"
 
 echo "==> Firma ad-hoc (node, luego la app)"
 codesign --force --sign - "$APP/Contents/Resources/node/node"
@@ -70,6 +75,8 @@ osacompile -o "$UNINSTALL" "$MACOS_DIR/installer/desinstalar.applescript"
 # osacompile no pone identificador ni versión mínima moderna: sin CFBundleIdentifier pkgbuild no lo toma como app.
 /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string do.caribbeandream.remotetotal.desinstalar" \
   -c "Add :LSMinimumSystemVersion string 12.0" "$UNINSTALL/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c "Set :CFBundleIconFile Desinstalar" "$UNINSTALL/Contents/Info.plist"
+cp "$MACOS_DIR/icono/Desinstalar.icns" "$UNINSTALL/Contents/Resources/"
 codesign --force --sign - "$UNINSTALL"
 
 echo "==> Instalador (.pkg)"
