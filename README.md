@@ -36,9 +36,9 @@ Al arrancar, el programa envía `/sendall 2` a TotalMix. TotalMix responde con l
 - la **salida principal** (`/controlroom/mainout`, por ejemplo los monitores de sala) y su pareja derecha si es estéreo;
 - las salidas **ocultas** en TotalMix (color 0);
 - las salidas **sin nombre** o con **nombre de fábrica**;
-- la **pareja derecha** de una salida estéreo (por ejemplo `AN 10` cuando la salida es `AN 9/10`).
+- la **pareja derecha** de una salida estéreo (por ejemplo `PH 10` cuando la salida es `PH 9/10`).
 
-El rol muestra el nombre que la salida tiene en TotalMix (por ejemplo "DRUMMER") y su etiqueta de hardware (por ejemplo "AN 9/10").
+El rol muestra el nombre que la salida tiene en TotalMix (por ejemplo "DRUMMER") y su etiqueta de hardware (por ejemplo "PH 9/10"). Las salidas y reproducciones 9–12 se llaman PH; las entradas 9–12 siguen AN.
 
 **Nombre de fábrica** = el nombre que TotalMix pone solo, con forma de etiqueta de hardware: `AN`, `PH`, `AES` o `ADAT`, seguido opcionalmente de un número, de `número/número` o de `L/R` (por ejemplo `AN 4`, `AN 7/8`, `PH 9/10`, `AES`, `ADAT 3/4`). No distingue mayúsculas y tolera espacios. `Analog Synth`, `PHIL`, `ADATA` y `Voz 2` **no** son de fábrica.
 Una salida, entrada o reproducción con nombre de fábrica o sin nombre **no aparece en el celular**, y `/api/set` la rechaza. Para que aparezca, cambiarle el nombre en TotalMix.

@@ -303,8 +303,8 @@ test('captura real de TotalMix: roles exactos y la mezcla de DRUMMER sin nombres
         { id: 'o0', name: 'Piano', out: 'AN 1' },
         { id: 'o1', name: 'Cantante', out: 'AN 2' },
         { id: 'o2', name: 'Guitarra', out: 'AN 3' },
-        { id: 'o8', name: 'DRUMMER', out: 'AN 9/10' },
-        { id: 'o10', name: 'Bassist', out: 'AN 11/12' },
+        { id: 'o8', name: 'DRUMMER', out: 'PH 9/10' },
+        { id: 'o10', name: 'Bassist', out: 'PH 11/12' },
       ]);
       const mix = await b.get('/api/mix?m=o8');
       assert.deepStrictEqual(mix.channels.map((c) => [c.key, c.label, c.sub]), [
@@ -316,6 +316,27 @@ test('captura real de TotalMix: roles exactos y la mezcla de DRUMMER sin nombres
     // Ningún fader con nombre de fábrica (la reproducción AN/ADAT de DRUMMER queda fuera).
     const mix = await b.get('/api/mix?m=o8');
     for (const c of mix.channels) assert.ok(!/^(AN|PH|AES|ADAT)/i.test(c.label), c.label);
+  } finally { b.stop(); }
+});
+
+test('etiqueta de hardware por tipo: salidas y reproducciones 9-12 son PH, entradas siguen AN', () => {
+  for (const i of [8, 9, 10, 11]) {
+    assert.strictEqual(ufx.channelLabel(i, 'output'), `PH ${i + 1}`);
+    assert.strictEqual(ufx.channelLabel(i, 'playback'), `PH ${i + 1}`);
+    assert.strictEqual(ufx.channelLabel(i, 'input'), `AN ${i + 1}`);
+  }
+  for (const i of [0, 7]) assert.strictEqual(ufx.channelLabel(i, 'output'), `AN ${i + 1}`);
+  assert.strictEqual(ufx.channelLabel(12, 'output'), 'AES L');
+  assert.strictEqual(ufx.channelLabel(14, 'playback'), 'ADAT 1');
+});
+
+test('fader de reproducción 9-12 lleva sub "DAW PH 9" (no AN)', async () => {
+  const b = await startBridge();
+  try {
+    await b.raw(bundle(message('/output/8/name', 'DRUMMER'), message('/output/8/stereo', 1)));
+    await b.raw(bundle(message('/playback/8/name', 'Click'), message('/mix/pb/8/8/faderlin', 0.5)));
+    await eventually(async () => assert.deepStrictEqual((await b.get('/api/mix?m=o8')).channels,
+      [{ key: 'pb-8', label: 'Click', sub: 'DAW PH 9', value: 0.5, level: null }]));
   } finally { b.stop(); }
 });
 

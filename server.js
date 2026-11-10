@@ -83,12 +83,12 @@ function onOsc({ address, args }) {
 }
 
 // ---- Etiquetas ----
-function pairLabel(n) {
-  const a = channelLabel(n), b = channelLabel(n + 1);
+function pairLabel(n, type) {
+  const a = channelLabel(n, type), b = channelLabel(n + 1, type);
   const [pa, ...ra] = a.split(' '), [pb, ...rb] = b.split(' ');
-  return pa === pb ? `${a}/${rb.join(' ')}` : `${a}/${b}`; // "AN 9/10", "AES L/R"
+  return pa === pb ? `${a}/${rb.join(' ')}` : `${a}/${b}`; // "PH 9/10", "AN 1/2", "AES L/R"
 }
-const outLabel = (n) => (ch.output[n]?.stereo ? pairLabel(n) : channelLabel(n));
+const outLabel = (n) => (ch.output[n]?.stereo ? pairLabel(n, 'output') : channelLabel(n, 'output'));
 
 // ---- Roles: salidas con nombre, sin principal, sin ocultas ni parejas derechas ----
 function roles() {
@@ -112,7 +112,7 @@ function mixView(role) {
   for (const { kind, idx } of nodes) {
     const type = TYPE[kind];
     if (hidden(type, idx) || stereoRight(type, idx) || !conNombre(type, idx)) continue;
-    const sub = (kind === 'pb' ? 'DAW ' : '') + channelLabel(idx);
+    const sub = (kind === 'pb' ? 'DAW ' : '') + channelLabel(idx, type);
     channels.push({
       key: `${kind}-${idx}`,
       label: ch[type][idx].name,

@@ -5,6 +5,9 @@
 //
 // Orden medido con TotalMix real (captura de 10-nov-2026, test/fixtures/captura-real.txt):
 // AN 1–12 = 0–11, AES = 12, ADAT 1/2 = 14 … ADAT 15/16 = 28.
+// Etiqueta de hardware: en salidas y reproducciones, los canales 9–12 (índices 8–11) se llaman PH
+// (medido: reproducciones 8 y 10 de fábrica = "PH 9/10" y "PH 11/12"; las salidas comparten numeración).
+// Las entradas 9–12 siguen AN (sin medición: están renombradas en la captura).
 
 function channelIndex(name) {
   if (typeof name === 'number') return name;
@@ -17,8 +20,12 @@ function channelIndex(name) {
   throw new Error(`No reconozco el canal "${name}". Usa por ejemplo "AN 9", "AN 9/10", "AES L" o "ADAT 3".`);
 }
 
-function channelLabel(index) {
-  if (index < 12) return `AN ${index + 1}`;
+// type: 'input' (por defecto), 'output' o 'playback'.
+function channelLabel(index, type = 'input') {
+  if (index < 12) {
+    const prefijo = index >= 8 && (type === 'output' || type === 'playback') ? 'PH' : 'AN';
+    return `${prefijo} ${index + 1}`;
+  }
   if (index < 14) return index === 12 ? 'AES L' : 'AES R';
   return `ADAT ${index - 13}`;
 }
