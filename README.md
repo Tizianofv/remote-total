@@ -82,3 +82,46 @@ Los canales cuentan desde 0 como en la tabla de RME (AN 1 = 0, AN 9/10 = 8).
 - Los faders solo se mueven por la página; el mute y el resto de TotalMix no se controlan desde aquí.
 - Cualquiera conectado a la WiFi del estudio puede abrir la página.
 - Los valores que muestra el celular son los de TotalMix al recibirlos y los últimos enviados desde la página.
+
+## App para Mac
+
+Para quien no quiera usar la terminal: **Remote Total.app** vive en la barra de menú y arranca el puente sola. Solo Mac con Apple Silicon (arm64), macOS 12 o superior. Trae su propio Node: no hace falta instalar Node.
+
+### Generar el instalador
+
+```
+bash macos/build.sh
+```
+
+Genera en `dist/`: `Remote Total.app`, `Desinstalar Remote Total.app` y `Remote Total.pkg` (el instalador). Hacen falta las Command Line Tools de Xcode (`swiftc`, `pkgbuild`, `productbuild`, `codesign`, `osacompile`) y un Node oficial arm64. Por defecto usa `../node/bin/node`; para otra ruta: `NODE_BIN=/ruta/a/node bash macos/build.sh`.
+
+El instalador **no está firmado** (no hay certificado de desarrollador). Las apps van con firma ad-hoc.
+
+### Instalar
+
+1. Doble clic en `dist/Remote Total.pkg` y seguir los pasos. Pide la contraseña de administrador porque instala en Aplicaciones.
+2. La primera vez, macOS avisa que el desarrollador no está identificado. Clic derecho sobre el `.pkg` (o sobre la app) → **Abrir**, y confirmar.
+3. Abrir **Remote Total** desde Aplicaciones. No aparece en el Dock: su icono está en la barra de menú (los deslizadores).
+4. Si macOS pregunta si Remote Total puede aceptar conexiones de red, permitirlo: los celulares necesitan entrar.
+
+### Usar
+
+- **Icono de la barra**: clic en la dirección principal (por ejemplo `http://192.168.1.20:8080`) la copia al portapapeles. Debajo está el estado: *TotalMix conectado*, *Esperando a TotalMix…* o *Puente detenido*. El icono se pone rojo si TotalMix no responde o si el puente está caído.
+- **Mostrar ventana**: abre la ventana con la dirección en grande, un código QR para escanear desde el celular, el estado y un recordatorio de la configuración OSC de TotalMix.
+- **Ajustes… (⌘,)**: cambia el puerto de la página, la IP de TotalMix y sus puertos de entrada y salida. Si los valores no son válidos, no guarda y marca el campo. Si son válidos, guarda `config.json` y reinicia el puente. «Valores por defecto» rellena los campos de fábrica sin guardar.
+- **Cerrar la ventana no cierra la app**: el puente sigue y la ventana se vuelve a abrir desde el menú.
+- **Salir (⌘Q)** cierra la app y **apaga el puente**.
+- Si el puerto de la página ya está ocupado (por ejemplo, porque hay otro Remote Total abierto), la ventana y el menú lo dicen. Si el puente se cae, aparece **Reiniciar puente**.
+
+Archivos de la app:
+- Configuración: `~/Library/Application Support/Remote Total/config.json` (la escribe Ajustes; si no existe, valores por defecto).
+- Registro del puente: `~/Library/Logs/Remote Total/puente.log` (rota al pasar de 512 KB).
+
+### Desinstalar
+
+Doble clic en **Desinstalar Remote Total.app** (en Aplicaciones). Pide confirmación y contraseña de administrador. Cierra la app y el puente, borra la app y su desinstalador de Aplicaciones, borra la configuración y los registros, y olvida el recibo del instalador.
+
+### Notas
+
+- Si la variable de entorno `CONFIG` está definida, el puente usa ese archivo y Ajustes no tiene efecto sobre el arranque.
+- Las pruebas de la app se hicieron sin pantalla: el arranque, la página, el registro, SIGTERM, el cambio de puerto por config y el caso de puerto ocupado están comprobados. Los botones y la ventana de Ajustes no se pudieron pulsar: no están comprobados en pantalla.
