@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#394147">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Mi mezcla</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;500&display=swap">
@@ -62,6 +65,13 @@ body {
   font: 500 11px/1 var(--mono); color: var(--text); background: var(--ink);
   border: 1px solid var(--edge); padding: 4px 8px;
 }
+.topr { display: flex; align-items: center; gap: 8px; }
+.fs {
+  background: var(--strip); border: 0; border-radius: 0; color: var(--text);
+  font: 700 12px/1 var(--display); letter-spacing: .04em; padding: 6px 9px; cursor: pointer;
+}
+.fs[aria-pressed="true"] { background: var(--orange); color: var(--ink); }
+.fs:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 .status.off .dot { background: var(--red); }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
 

@@ -39,10 +39,52 @@ async function api(p, opts) {
   return r.json();
 }
 
+// ---- Pantalla completa ----
+// El navegador solo deja entrar con un gesto del usuario. El primer toque de la página (cualquiera, una vez por carga)
+// pide pantalla completa; ese toque sigue haciendo lo suyo. Si el usuario sale con el botón, el primer toque no la vuelve a pedir.
+const fsSupported = !!((document.documentElement.requestFullscreen && document.fullscreenEnabled) ||
+  (document.documentElement.webkitRequestFullscreen && document.webkitFullscreenEnabled));
+const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+function fsEnter() {
+  try {
+    const el = document.documentElement;
+    const p = el.requestFullscreen ? el.requestFullscreen() : el.webkitRequestFullscreen();
+    if (p && p.catch) p.catch(() => {}); // rechazado (sin gesto, o sin permiso): se ignora
+  } catch {}
+}
+function fsExit() {
+  try {
+    const p = document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen();
+    if (p && p.catch) p.catch(() => {});
+  } catch {}
+}
+function fsLabel() { return fsEl() ? 'Salir' : 'Completa'; }
+function fsSync() {
+  const b = $('fsbtn');
+  if (!b) return;
+  b.textContent = fsLabel();
+  b.setAttribute('aria-pressed', fsEl() ? 'true' : 'false');
+}
+if (fsSupported) {
+  let firstTouchDone = false;
+  document.addEventListener('pointerdown', (e) => {
+    if (firstTouchDone) return;
+    firstTouchDone = true;
+    if (e.target.closest && e.target.closest('#fsbtn')) return; // el botón hace su propio toggle
+    if (!fsEl()) fsEnter();
+  }, { capture: true });
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest || !e.target.closest('#fsbtn')) return;
+    if (fsEl()) fsExit(); else fsEnter();
+  });
+  document.addEventListener('fullscreenchange', fsSync);
+  document.addEventListener('webkitfullscreenchange', fsSync);
+}
+
 function header(extra = '') {
   return `<div class="top">
     <div class="brand"><b>Remote</b> Total</div>
-    <div class="topr"><div class="status" id="status"><span class="dot"></span><span id="stxt">TotalMix</span></div></div>
+    <div class="topr">${fsSupported ? `<button class="fs" id="fsbtn" type="button" aria-pressed="${fsEl() ? 'true' : 'false'}">${fsLabel()}</button>` : ''}<div class="status" id="status"><span class="dot"></span><span id="stxt">TotalMix</span></div></div>
   </div>${extra}`;
 }
 function setStatus(ok, text) {
