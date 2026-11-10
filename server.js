@@ -45,6 +45,7 @@ const FABRICA = /^(AN|PH|AES|ADAT)(\s*(\d+(\s*\/\s*\d+)?|L(\s*\/\s*R)?|R))?$/i;
 const conNombre = (type, n) => { const name = ch[type][n]?.name; return !!name && !FABRICA.test(name); };
 
 let mainOut = null;
+let ultimoOscMs = null;           // hora (ms) del último paquete OSC de TotalMix
 const fader = {};                 // "in|3|8" -> faderlin 0..1
 const level = {};                 // "in|3" -> pico dB
 const outFader = {};              // 8 -> faderlin 0..1 de la salida 8 (el fader del rol)
@@ -148,9 +149,19 @@ function mixView(role) {
 // ---- OSC hacia TotalMix ----
 const sock = dgram.createSocket('udp4');
 sock.on('message', (buf) => {
-  for (const m of decodePackets(buf)) { try { onOsc(m); } catch {} }
+  const msgs = decodePackets(buf);
+  if (msgs.length) ultimoOscMs = Date.now();
+  for (const m of msgs) { try { onOsc(m); } catch {} }
 });
-sock.on('error', (e) => { console.error('Error en el puerto OSC:', e.message); process.exit(1); });
+// Puerto ocupado al arrancar: mensaje claro y código 2 (la app de barra de menú lo distingue).
+function ocupado(puerto, quien) {
+  console.error(`Puerto ${quien}${puerto} ocupado: ¿ya hay otro Remote Total abierto?`);
+  process.exit(2);
+}
+sock.on('error', (e) => {
+  if (e.code === 'EADDRINUSE') ocupado(config.totalmix.listenPort, 'OSC ');
+  console.error('Error en el puerto OSC:', e.message); process.exit(1);
+});
 
 function send(address, value) {
   if (DRY_RUN) { console.log('->', address, value); return Promise.resolve(); }
@@ -233,8 +244,30 @@ function imagenPublica(res, pedido) {
   });
 }
 
+// Flujos SSE abiertos ({res, t}): el apagado los cierra.
+const sseAbiertos = new Set();
+
+// Direcciones IPv4 no internas: las mismas que se imprimen al arrancar.
+function direcciones() {
+  const out = [];
+  for (const ifs of Object.values(os.networkInterfaces())) {
+    for (const a of ifs || []) if (a.family === 'IPv4' && !a.internal) out.push(`http://${a.address}:${config.port}`);
+  }
+  return out;
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
+  if (req.method === 'GET' && url.pathname === '/api/estado') {
+    const ahora = Date.now();
+    return json(res, 200, {
+      totalmix: ultimoOscMs !== null && ahora - ultimoOscMs < 3000,
+      ultimoMensajeMs: ultimoOscMs,
+      port: config.port,
+      urls: direcciones(),
+      roles: roles().length,
+    });
+  }
   if (req.method === 'GET' && url.pathname === '/api/musicians') {
     return json(res, 200, roles().map((r) => ({ id: r.id, name: r.name, out: r.out })));
   }
@@ -260,7 +293,9 @@ const server = http.createServer((req, res) => {
       const msg = JSON.stringify(mixView(role));
       if (msg !== last) { res.write(`data: ${msg}\n\n`); last = msg; }
     }, 80);
-    req.on('close', () => clearInterval(t));
+    const abierto = { res, t };
+    sseAbiertos.add(abierto);
+    req.on('close', () => { clearInterval(t); sseAbiertos.delete(abierto); });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/set') {
@@ -358,7 +393,27 @@ function seedDemo() {
   }, 100).unref();
 }
 
+// Apagado limpio (SIGTERM o SIGINT): cierra los flujos SSE, el UDP y el servidor; sale con 0.
+// Si algo cuelga, sale igual a los 2 s.
+let apagando = false;
+function apagar() {
+  if (apagando) return;
+  apagando = true;
+  for (const { res, t } of sseAbiertos) { clearInterval(t); res.end(); }
+  sseAbiertos.clear();
+  try { sock.close(); } catch {}
+  server.closeAllConnections?.();
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 2000);
+}
+
 if (require.main === module) {
+  server.on('error', (e) => {
+    if (e.code === 'EADDRINUSE') ocupado(config.port, '');
+    console.error('Error del servidor web:', e.message); process.exit(1);
+  });
+  process.on('SIGTERM', apagar);
+  process.on('SIGINT', apagar);
   if (DRY_RUN) {
     seedDemo();
   } else {
@@ -371,9 +426,7 @@ if (require.main === module) {
     console.log(`Puente${DRY_RUN ? ' · PRUEBA: datos de ejemplo, no envía a TotalMix' : ''}`);
     console.log(`TotalMix OSC: ${config.totalmix.host}:${config.totalmix.port}`);
     console.log('Abrir desde el celular (misma WiFi):');
-    for (const ifs of Object.values(os.networkInterfaces())) {
-      for (const a of ifs || []) if (a.family === 'IPv4' && !a.internal) console.log(`  http://${a.address}:${config.port}`);
-    }
+    for (const u of direcciones()) console.log(`  ${u}`);
   });
 }
 

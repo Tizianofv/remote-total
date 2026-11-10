@@ -60,6 +60,7 @@ async function launch(args, cfg, extraEnv = {}) {
   const cfgPath = path.join(dir, 'config.json');
   fs.writeFileSync(cfgPath, JSON.stringify(cfg));
   const proc = spawn(process.execPath, [SERVER, ...args], { env: { ...process.env, CONFIG: cfgPath, ...extraEnv } });
+  const exited = new Promise((r) => proc.on('exit', (code, signal) => r({ code, signal })));
   let out = '';
   proc.stdout.on('data', (d) => { out += d; });
   proc.stderr.on('data', (d) => { out += d; });
@@ -70,7 +71,7 @@ async function launch(args, cfg, extraEnv = {}) {
     stop();
     throw new Error(`El servidor no arrancó:\n${out}`);
   }
-  return { port: cfg.port, stop, url: (p) => `http://127.0.0.1:${cfg.port}${p}` };
+  return { port: cfg.port, stop, url: (p) => `http://127.0.0.1:${cfg.port}${p}`, proc, exited };
 }
 
 // Puente conectado a un TotalMix simulado (un socket UDP que recibe lo que enviamos).
@@ -98,7 +99,7 @@ async function startBridge() {
       if (!received.some((m) => m.address === '/sendall' && m.args[0] === 2)) throw new Error('falta /sendall 2');
     });
   } catch (e) { stop(); throw e; }
-  return { received, reply, raw, get, post, last, url, stop };
+  return { received, reply, raw, get, post, last, url, stop, proc: app.proc, exited: app.exited };
 }
 
 // Lo que respondería TotalMix: nombres, estéreo, principal, oculta, y faders activos.
@@ -532,6 +533,68 @@ test('imágenes sueltas de public/: .jpg con sus bytes; otras extensiones, rutas
     // después de todo lo anterior, el servidor sigue contestando
     assert.strictEqual((await rawGet(app, '/index.html')).status, 200);
   } finally { app.stop(); }
+});
+
+test('/api/estado: totalmix pasa a true al llegar OSC de TotalMix; urls, puerto y roles', async () => {
+  const b = await startBridge();
+  try {
+    const e0 = await b.get('/api/estado');
+    assert.strictEqual(e0.totalmix, false);
+    assert.strictEqual(e0.ultimoMensajeMs, null);
+    assert.ok(Array.isArray(e0.urls));
+    assert.ok(e0.urls.every((u) => /^http:\/\/\d+\.\d+\.\d+\.\d+:\d+$/.test(u)), e0.urls.join(' '));
+    assert.strictEqual(e0.roles, 0);
+    await b.raw(bundle(message('/output/0/name', 'Piano')));
+    await eventually(async () => {
+      const e = await b.get('/api/estado');
+      assert.strictEqual(e.totalmix, true);
+      assert.strictEqual(typeof e.ultimoMensajeMs, 'number');
+      assert.strictEqual(e.roles, 1);
+    });
+  } finally { b.stop(); }
+});
+
+test('SIGTERM: cierra el flujo SSE abierto y sale con 0 en menos de 2 s', async () => {
+  const b = await startBridge();
+  try {
+    await b.raw(bundle(message('/output/0/name', 'Piano')));
+    await eventually(async () => assert.strictEqual((await b.get('/api/musicians')).length, 1));
+    const s = sse(b.url('/api/stream?m=o0'));
+    await eventually(() => { if (!s.text().includes('data: ')) throw new Error('sin datos aún'); });
+    const t0 = Date.now();
+    b.proc.kill('SIGTERM');
+    const { code, signal } = await b.exited;
+    assert.strictEqual(code, 0, `salió con código ${code} (señal ${signal})`);
+    assert.ok(Date.now() - t0 < 2000, 'tardó 2 s o más');
+    await eventually(() => assert.ok(s.ended(), 'el flujo SSE no se cerró'));
+    s.stop();
+  } finally { b.stop(); }
+});
+
+test('puerto web ocupado: mensaje claro en stderr y salida con código 2', async () => {
+  const ocupador = net.createServer();
+  await new Promise((r) => ocupador.listen(0, '0.0.0.0', r));
+  const port = ocupador.address().port;
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rt-'));
+  const cfgPath = path.join(dir, 'config.json');
+  fs.writeFileSync(cfgPath, JSON.stringify({
+    port, totalmix: { host: '127.0.0.1', port: await freeUdpPort(), listenPort: await freeUdpPort() },
+  }));
+  const proc = spawn(process.execPath, [SERVER], { env: { ...process.env, CONFIG: cfgPath } });
+  let out = '';
+  proc.stdout.on('data', (d) => { out += d; });
+  proc.stderr.on('data', (d) => { out += d; });
+  const exited = new Promise((r) => proc.on('exit', (code) => r(code)));
+  try {
+    const code = await Promise.race([exited, new Promise((r) => setTimeout(() => r('colgado'), 5000))]);
+    if (code === 'colgado') proc.kill();
+    assert.strictEqual(code, 2, `código ${code}: ${out}`);
+    assert.ok(out.includes(`Puerto ${port} ocupado: ¿ya hay otro Remote Total abierto?`), out);
+  } finally {
+    proc.kill();
+    ocupador.close();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test('--dry-run: datos de ejemplo sin TotalMix', async () => {
