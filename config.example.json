@@ -1,30 +1,43 @@
 {
   "port": 8080,
+  "mode": "global",
+  "useTotalMixNames": true,
   "totalmix": {
     "host": "127.0.0.1",
     "port": 7001,
-    "listenPort": 9001,
-    "gapMs": 15
+    "listenPort": 9001
   },
   "musicians": [
     {
-      "id": "voz",
-      "name": "Voz",
-      "submix": 2,
+      "id": "voz", "name": "Voz", "output": "AN 1",
       "channels": [
-        { "label": "Mi micrófono", "bus": "input", "fader": 1 },
-        { "label": "Guitarra", "bus": "input", "fader": 2 },
-        { "label": "Pista / DAW", "bus": "playback", "fader": 1 }
+        { "label": "Yo", "input": "AN 9" },
+        { "label": "Guitarra", "input": "AN 11" },
+        { "label": "Bajo", "input": "AN 12" },
+        { "label": "Pista", "playback": "AN 1/2" },
+        { "label": "Click", "playback": "AN 3/4" }
       ]
     },
     {
-      "id": "guitarra",
-      "name": "Guitarra",
-      "submix": 4,
+      "id": "gtr", "name": "Guitarra", "output": "AN 2",
       "channels": [
-        { "label": "Mi guitarra", "bus": "input", "fader": 2 },
-        { "label": "Voz", "bus": "input", "fader": 1 },
-        { "label": "Pista / DAW", "bus": "playback", "fader": 1 }
+        { "label": "Yo", "input": "AN 11" },
+        { "label": "Voz", "input": "AN 9" },
+        { "label": "Pista", "playback": "AN 1/2" },
+        { "label": "Click", "playback": "AN 3/4" }
+      ]
+    },
+    {
+      "id": "bat", "name": "Batería", "output": "AN 9/10",
+      "channels": [
+        { "label": "Bombo", "input": "AN 1" },
+        { "label": "Caja", "input": "AN 2" },
+        { "label": "Over L", "input": "AN 3" },
+        { "label": "Over R", "input": "AN 4" },
+        { "label": "Bajo", "input": "AN 12" },
+        { "label": "Voz", "input": "AN 9" },
+        { "label": "Pista", "playback": "AN 1/2" },
+        { "label": "Click", "playback": "AN 3/4" }
       ]
     }
   ]

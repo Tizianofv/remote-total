@@ -22,7 +22,7 @@ function encodeMessage(address, floats = []) {
 
 function readString(buf, offset) {
   const end = buf.indexOf(0, offset);
-  const str = buf.toString('ascii', offset, end);
+  const str = buf.toString('utf8', offset, end);
   return { str, next: Math.ceil((end + 1) / 4) * 4 };
 }
 

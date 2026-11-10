@@ -2,82 +2,149 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f17">
 <title>Mi mezcla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-  :root { --bg:#111; --fg:#eee; --muted:#888; --accent:#e0a100; --card:#1c1c1c; }
-  * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 system-ui, sans-serif; padding:16px; }
-  h1 { font-size:1.3rem; margin:0 0 16px; }
-  .btn { display:block; width:100%; padding:18px; margin:0 0 10px; font-size:1.1rem; border:0; border-radius:10px; background:var(--card); color:var(--fg); }
-  .row { background:var(--card); border-radius:10px; padding:14px; margin-bottom:12px; }
-  .row label { display:flex; justify-content:space-between; margin-bottom:8px; }
-  .row span { color:var(--muted); font-variant-numeric:tabular-nums; }
-  input[type=range] { width:100%; height:40px; accent-color:var(--accent); }
-  a { color:var(--muted); }
-  #err { color:#f66; }
+body { margin: 0; }
+
+/* Layout: una sola columna tipo app; en escritorio se centra con ancho de celular. Look oscuro de consola, elegido a propósito (un solo tema). */
+:root {
+  --ink: #0b0f17;          /* fondo */
+  --panel: #131a26;        /* superficie de canal */
+  --line: #233047;         /* bordes y escalas */
+  --text: #e6edf7;
+  --muted: #7d8aa3;
+  --accent: #4fd8e8;       /* cian fósforo: selección y faders */
+  --hot: #ffb547;          /* medidor alto */
+  --clip: #ff5470;         /* medidor en rojo */
+  --ok: #4be39a;           /* conectado */
+  --display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: radial-gradient(120% 60% at 50% -10%, #17324a 0%, var(--ink) 55%) fixed, var(--ink);
+  color: var(--text);
+  font: 15px/1.45 var(--body);
+  -webkit-tap-highlight-color: transparent;
+}
+.app {
+  max-width: 460px; margin: 0 auto; min-height: 100%;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px 28px;
+  display: flex; flex-direction: column; gap: 18px;
+}
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brand { font: 600 13px/1 var(--display); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.brand b { color: var(--accent); font-weight: 700; }
+.status {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 500 12px/1 var(--mono); color: var(--muted);
+  border: 1px solid var(--line); border-radius: 999px; padding: 7px 11px;
+}
+.status.off .dot { background: var(--clip); box-shadow: 0 0 10px var(--clip); animation: none; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); animation: pulse 2.4s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .45; } }
+.demo { font: 500 11px/1 var(--mono); color: var(--hot); letter-spacing: .06em; text-transform: uppercase; }
+
+h1 { font: 700 clamp(30px, 9vw, 40px)/1.05 var(--display); margin: 0; text-wrap: balance; letter-spacing: .01em; }
+h1 span { color: var(--accent); }
+.lede { color: var(--muted); margin: 6px 0 0; max-width: 40ch; }
+
+/* ---- Pantalla 1: elegir músico ---- */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.who {
+  position: relative; text-align: left; cursor: pointer;
+  background: linear-gradient(180deg, #172131, var(--panel));
+  border: 1px solid var(--line); border-radius: 14px; color: var(--text);
+  padding: 16px 14px 14px; display: flex; flex-direction: column; gap: 10px;
+  font: inherit; transition: border-color .15s, transform .15s;
+}
+.who:hover, .who:focus-visible { border-color: var(--accent); outline: none; transform: translateY(-1px); }
+.who .name { font: 600 19px/1.1 var(--display); }
+.who .out { font: 400 12px/1 var(--mono); color: var(--muted); }
+.who .mini { display: flex; gap: 3px; height: 18px; align-items: flex-end; }
+.who .mini i { flex: 1; background: var(--line); border-radius: 2px; height: 30%; }
+.who.busy .mini i { background: var(--accent); opacity: .55; }
+.who .tag { position: absolute; top: 12px; right: 12px; font: 500 10px/1 var(--mono); color: var(--ok); letter-spacing: .08em; }
+.hint { font: 400 12px/1.4 var(--mono); color: var(--muted); text-align: center; }
+
+/* ---- Pantalla 2: mi mezcla ---- */
+.mixhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.back {
+  background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 10px;
+  font: 500 13px/1 var(--body); padding: 9px 12px; cursor: pointer;
+}
+.back:focus-visible, .back:hover { color: var(--text); border-color: var(--accent); outline: none; }
+.route { font: 400 12px/1.3 var(--mono); color: var(--muted); margin-top: 6px; }
+.route b { color: var(--text); font-weight: 600; }
+
+.strips { display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: 8px; }
+.strips.scroll {
+  grid-template-columns: none; grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 8px * (var(--n) - 1)) / var(--n));
+  overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain;
+}
+.strips.scroll::-webkit-scrollbar { display: none; }
+.strips.scroll .strip { scroll-snap-align: start; }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: -8px; }
+.pager span { font: 500 12px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.pg { width: 44px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--accent); font: 600 20px/1 var(--display); cursor: pointer; }
+.pg:disabled { color: var(--line); cursor: default; }
+.pg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.strip {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 12px 6px 10px; display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0;
+}
+.strip.me { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); box-shadow: inset 0 0 24px color-mix(in srgb, var(--accent) 10%, transparent); }
+.db { font: 600 14px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text); }
+.db small { color: var(--muted); font-weight: 400; font-size: 10px; margin-left: 2px; }
+.body { display: flex; gap: 10px; height: min(46vh, 340px); min-height: 240px; }
+.meter { width: 6px; border-radius: 3px; background: #0a0e15; position: relative; overflow: hidden; }
+.meter i {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 0%;
+  background: linear-gradient(to top, var(--accent) 0%, var(--accent) 62%, var(--hot) 80%, var(--clip) 96%);
+  background-size: 100% var(--h, 300px); background-position: bottom;
+}
+.fader { position: relative; width: 34px; touch-action: none; cursor: grab; border-radius: 6px; }
+.fader:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.fader .rail { position: absolute; left: 50%; top: 10px; bottom: 10px; width: 4px; transform: translateX(-50%); background: #0a0e15; border-radius: 2px; }
+.fader .fill { position: absolute; left: 50%; bottom: 10px; width: 4px; transform: translateX(-50%); background: var(--accent); border-radius: 2px; box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 60%, transparent); }
+.fader .tick { position: absolute; left: 3px; right: 3px; height: 1px; background: var(--line); }
+.fader .tick.zero { background: var(--muted); left: 0; right: 0; }
+.fader .cap {
+  position: absolute; left: 0; right: 0; height: 22px; margin-bottom: -11px; border-radius: 5px;
+  background: linear-gradient(180deg, #e9eef6, #9aa6b8); box-shadow: 0 3px 8px #0009, inset 0 -2px 0 #6c7789;
+}
+.fader .cap::after { content: ""; position: absolute; left: 4px; right: 4px; top: 10px; height: 2px; background: #1b2433; }
+.label { font: 600 13px/1.15 var(--display); text-align: center; letter-spacing: .02em; overflow-wrap: anywhere; }
+.label small { display: block; font: 400 10px/1.3 var(--mono); color: var(--muted); letter-spacing: 0; margin-top: 2px; }
+
+.bar { display: flex; gap: 8px; }
+.chip {
+  flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; color: var(--text);
+  font: 600 13px/1 var(--display); letter-spacing: .04em; padding: 14px 8px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+.chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.foot { font: 400 11px/1.4 var(--mono); color: var(--muted); text-align: center; }
+
+.topr { display: flex; align-items: center; gap: 8px; }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none; } .who { transition: none; } }
+
+.meter i { transition: none; }
+#err { color: var(--clip); font: 500 13px/1.4 var(--body); text-align: center; margin: 0; min-height: 1em; }
 </style>
 </head>
 <body>
-<div id="app"></div>
-<p id="err"></p>
-<script>
-const app = document.getElementById('app');
-const err = document.getElementById('err');
-const params = new URLSearchParams(location.search);
-const mid = params.get('m');
-
-async function api(path, opts) {
-  const r = await fetch(path, opts);
-  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
-  return r.json();
-}
-
-async function choose() {
-  const list = await api('/api/musicians');
-  app.innerHTML = '<h1>¿Quién eres?</h1>';
-  for (const m of list) {
-    const b = document.createElement('button');
-    b.className = 'btn'; b.textContent = m.name;
-    b.onclick = () => { location.search = '?m=' + encodeURIComponent(m.id); };
-    app.appendChild(b);
-  }
-}
-
-async function mix() {
-  const data = await api('/api/mix?m=' + encodeURIComponent(mid));
-  app.innerHTML = '';
-  const h = document.createElement('h1'); h.textContent = 'Mezcla: ' + data.name; app.appendChild(h);
-  data.channels.forEach((c, i) => {
-    const row = document.createElement('div'); row.className = 'row';
-    const lab = document.createElement('label');
-    const name = document.createElement('b'); name.textContent = c.label;
-    const val = document.createElement('span');
-    lab.append(name, val);
-    const s = document.createElement('input');
-    s.type = 'range'; s.min = 0; s.max = 1000;
-    s.value = c.value == null ? 0 : Math.round(c.value * 1000);
-    val.textContent = c.value == null ? '—' : Math.round(c.value * 100) + '%';
-    let timer = null, last = 0;
-    const push = () => {
-      last = Date.now();
-      fetch('/api/set', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ m: mid, c: i, v: s.value / 1000 }) })
-        .then(r => { err.textContent = r.ok ? '' : 'Error al enviar'; })
-        .catch(() => { err.textContent = 'Sin conexión con el estudio'; });
-    };
-    s.oninput = () => {
-      val.textContent = Math.round(s.value / 10) + '%';
-      clearTimeout(timer);
-      if (Date.now() - last > 80) push(); else timer = setTimeout(push, 80);
-    };
-    row.append(lab, s); app.appendChild(row);
-  });
-  const back = document.createElement('a'); back.href = '/'; back.textContent = 'Cambiar de músico';
-  app.appendChild(back);
-}
-
-(mid ? mix() : choose()).catch(e => { err.textContent = 'Error: ' + e.message; });
-</script>
+<div class="app" id="app"></div>
+<script src="/app.js"></script>
 </body>
 </html>
