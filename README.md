@@ -48,7 +48,7 @@ Una salida, entrada o reproducción con nombre de fábrica o sin nombre **no apa
 - Cada fader muestra el valor que TotalMix tiene para ese canal en esa salida. Si TotalMix todavía no lo ha enviado, sale vacío; un canal enviado a -∞ sale con el fader en cero.
 - Los canales ocultos, los que no tienen nombre propio (sin nombre o de fábrica) y la pareja derecha de un estéreo no se muestran.
 - Cada fader muestra el nombre del canal en TotalMix (por ejemplo "MIC 1").
-- Cada rol tiene además el **fader de su salida** (campo `master`, por ejemplo "DRUMMER" en "PH 9/10"), con su medidor. Es el fader de la salida misma, no de un canal.
+- Cada rol tiene además el **fader de su salida** (campo `master`, por ejemplo "DRUMMER" en "PH 9/10"), con su medidor. Es el fader de la salida misma, no de un canal. Además, el retorno de efectos de esa salida va en `master.fx` (en dB, de -65 a 0; `k: "fx"` en `/api/set`).
 
 Para cambiar qué escucha un músico, se cambia la mezcla en TotalMix. La página se actualiza sola.
 

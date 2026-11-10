@@ -49,6 +49,7 @@ const fader = {};                 // "in|3|8" -> faderlin 0..1
 const level = {};                 // "in|3" -> pico dB
 const outFader = {};              // 8 -> faderlin 0..1 de la salida 8 (el fader del rol)
 const outLevel = {};              // 8 -> pico dB de la salida 8
+const outFxReturn = {};           // 8 -> retorno de efectos de la salida 8, en dB
 const nodeKey = (kind, idx, out) => `${kind}|${idx}|${out}`;
 
 function setNode(kind, idx, out, lin) {
@@ -75,6 +76,12 @@ function onOsc({ address, args }) {
   if (p[0] === 'output' && p.length === 3 && p[2] === 'faderlin' && typeof v === 'number') {
     const n = Number(p[1]);
     if (Number.isInteger(n) && n >= 0) outFader[n] = Math.min(1, Math.max(0, v));
+    return;
+  }
+  // Retorno de efectos de la salida, en dB: /output/<n>/fxreturn.
+  if (p[0] === 'output' && p.length === 3 && p[2] === 'fxreturn' && typeof v === 'number') {
+    const n = Number(p[1]);
+    if (Number.isInteger(n) && n >= 0) outFxReturn[n] = v;
     return;
   }
   if (p[0] === 'level' && p[1] === 'out' && p.length === 3 && typeof v === 'number') {
@@ -131,7 +138,10 @@ function mixView(role) {
     }
   }
   // Fader de la salida del rol: su etiqueta de hardware sale de role.out (ej. "PH 9/10").
-  const master = { key: 'out', label: role.name, sub: role.out, value: outFader[role.n] ?? null, level: outLevel[role.n] ?? null };
+  const master = {
+    key: 'out', label: role.name, sub: role.out, value: outFader[role.n] ?? null, level: outLevel[role.n] ?? null,
+    fx: { key: 'fx', value: outFxReturn[role.n] ?? null },
+  };
   return { id: role.id, name: role.name, out: role.out, master, channels };
 }
 
@@ -186,6 +196,15 @@ function setOutFader(role, v) {
   drain();
 }
 
+// Retorno de efectos de la salida del rol, en dB; siempre la salida de ese rol.
+function setOutFxReturn(role, db) {
+  outFxReturn[role.n] = db;
+  const key = `fx|${role.n}`;
+  pending.delete(key);
+  pending.set(key, { addr: `/output/${role.n}/fxreturn`, v: db });
+  drain();
+}
+
 // ---- HTTP ----
 function json(res, code, body) {
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -231,11 +250,16 @@ const server = http.createServer((req, res) => {
       const role = findRole(p?.m);
       const m = typeof p?.k === 'string' ? /^(in|pb)-(\d+)$/.exec(p.k) : null;
       const isOut = p?.k === 'out';
-      if (!role || (!m && !isOut) || typeof p.v !== 'number' || !Number.isFinite(p.v)) {
+      const isFx = p?.k === 'fx';
+      if (!role || (!m && !isOut && !isFx) || typeof p.v !== 'number' || !Number.isFinite(p.v)) {
         return json(res, 400, { error: 'datos inválidos' });
       }
       if (isOut) {
         setOutFader(role, Math.min(1, Math.max(0, p.v)));
+        return json(res, 200, { ok: true });
+      }
+      if (isFx) {
+        setOutFxReturn(role, Math.min(0, Math.max(-65, p.v)));
         return json(res, 200, { ok: true });
       }
       const idx = Number(m[2]);
@@ -296,6 +320,7 @@ function seedDemo() {
   // Fader y medidor de la salida de cada rol de ejemplo.
   for (const n of [0, 1, 2, 3, 4, 5, 8, 10]) {
     put(`/output/${n}/faderlin`, 0.7 + (n % 3) * 0.05);
+    put(`/output/${n}/fxreturn`, -18);
     put(`/level/out/${n}`, -20 - n);
   }
   // Medidores que se mueven: caminata aleatoria en los canales encendidos (fader > 0).

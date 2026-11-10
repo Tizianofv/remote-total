@@ -188,7 +188,7 @@ test('arranque: pide /sendall y arma roles y faders desde lo que responde TotalM
     ]));
     await eventually(async () => assert.deepStrictEqual(await b.get('/api/mix?m=o0'), {
       id: 'o0', name: 'Batería', out: 'AN 1',
-      master: { key: 'out', label: 'Batería', sub: 'AN 1', value: null, level: null },
+      master: { key: 'out', label: 'Batería', sub: 'AN 1', value: null, level: null, fx: { key: 'fx', value: null } },
       channels: [
         { key: 'in-0', label: 'MIC 1', sub: 'AN 1', value: 0.5, level: -12.5 },
         { key: 'in-1', label: 'MIC 2', sub: 'AN 2', value: null, level: null },
@@ -375,7 +375,7 @@ test('fader de la salida del rol: /output/<n>/faderlin y /level/out/<n> llegan a
     await b.raw(bundle(message('/output/8/faderlin', 0.5)));
     await b.raw(bundle(message('/level/out/8', -20)));
     await eventually(async () => assert.deepStrictEqual((await b.get('/api/mix?m=o8')).master,
-      { key: 'out', label: 'DRUMMER', sub: 'PH 9/10', value: 0.5, level: -20 }));
+      { key: 'out', label: 'DRUMMER', sub: 'PH 9/10', value: 0.5, level: -20, fx: { key: 'fx', value: null } }));
   } finally { b.stop(); }
 });
 
@@ -468,6 +468,30 @@ test('mezcla: todo canal con nombre sale, también en -∞; ocultos y de fábric
   } finally { b.stop(); }
 });
 
+test('retorno de efectos de la salida: /output/<n>/fxreturn llega a master.fx; /api/set fx en dB, recortado a [-65, 0]', async () => {
+  const b = await startBridge();
+  try {
+    await b.raw(bundle(message('/output/0/name', 'Piano'), message('/output/8/name', 'DRUMMER'), message('/output/8/stereo', 1)));
+    await eventually(async () => assert.strictEqual((await b.get('/api/musicians')).length, 2));
+    await b.raw(bundle(message('/output/8/fxreturn', -18)));
+    await eventually(async () => assert.deepStrictEqual((await b.get('/api/mix?m=o8')).master.fx, { key: 'fx', value: -18 }));
+
+    assert.strictEqual((await b.post('/api/set', { m: 'o8', k: 'fx', v: -10 })).status, 200);
+    await eventually(() => assert.strictEqual(b.last('/output/8/fxreturn').args[0], -10));
+    await b.post('/api/set', { m: 'o8', k: 'fx', v: 5 });
+    await eventually(() => assert.strictEqual(b.last('/output/8/fxreturn').args[0], 0));
+    await b.post('/api/set', { m: 'o8', k: 'fx', v: -90 });
+    await eventually(() => assert.strictEqual(b.last('/output/8/fxreturn').args[0], -65));
+
+    // otro rol: a SU salida (0), nunca a la 8
+    assert.strictEqual((await b.post('/api/set', { m: 'o0', k: 'fx', v: -20 })).status, 200);
+    await eventually(() => assert.strictEqual(b.last('/output/0/fxreturn').args[0], -20));
+    assert.strictEqual(b.received.filter((m) => m.address === '/output/8/fxreturn').length, 3);
+
+    assert.strictEqual((await b.post('/api/set', { m: 'o8', k: 'fx', v: 'mucho' })).status, 400);
+  } finally { b.stop(); }
+});
+
 test('--dry-run: datos de ejemplo sin TotalMix', async () => {
   const app = await launch(['--dry-run'], {
     port: await freeTcpPort(), totalmix: { host: '127.0.0.1', port: 7001, listenPort: 9001 },
@@ -483,5 +507,6 @@ test('--dry-run: datos de ejemplo sin TotalMix', async () => {
     assert.strictEqual(mix.channels.find((c) => c.key === 'in-6').value, 0);
     assert.deepStrictEqual([mix.master.label, mix.master.sub, mix.master.level], ['DRUMMER', 'PH 9/10', -28]);
     assert.ok(Math.abs(mix.master.value - 0.8) < 1e-6);
+    assert.strictEqual(mix.master.fx.value, -18);
   } finally { app.stop(); }
 });
