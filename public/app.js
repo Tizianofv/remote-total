@@ -8,6 +8,7 @@ const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const STRIP_W = 76;   // ancho mínimo de un canal (px), con la escala de la captura
 const GAP = 2;        // separación entre canales (px)
 const OUT_W = 84;     // ancho fijo de la salida del rol (px)
+const FX_MIN = -65;   // rango del retorno FX en dB: -65 es apagado (se muestra -∞), 0 es el máximo
 let cleanup = () => {};
 let gen = 0; // cambia al salir de cada pantalla; las respuestas viejas se descartan
 
@@ -228,6 +229,7 @@ async function showMix(id) {
   let visible = 3;               // canales de entrada que caben por página
   let selKey = null;             // clave del último canal tocado o movido (recuadro rojo; nulo al entrar)
   let cur = { chs: data.channels || [], master: data.master ?? null }; // lo último recibido
+  let fxDb = data.master?.fx?.value ?? null; // retorno FX en dB (-65..0), null = sin datos: la tira se ve deshabilitada
   const val = new Map();         // valor 0..1 o null (lo que muestra el fader)
   const touched = new Map();     // hasta cuándo ignorar lo que llega de TotalMix (guarda de 700 ms)
   const meter = new Map();       // nivel suavizado del medidor
@@ -298,6 +300,61 @@ async function showMix(id) {
     });
   };
 
+  // Fader FX (retorno de TotalMix, master.fx): pequeño, dentro de la salida, a la derecha del fader grande.
+  // Lineal en dB de -65 a 0 (-65 = apagado, se ve -∞). Sin medidor. Su área de toque es propia (no mueve el grande).
+  const fxFaderHtml = () => `<div class="fxf" id="fxfader" tabindex="0" role="slider" aria-label="Retorno FX" aria-valuemin="${FX_MIN}" aria-valuemax="0">
+            <div class="rail"></div><div class="cap" id="fxcap"></div><b class="fxv" id="fxv">—</b>
+          </div>`;
+  const fxShort = (d) => (d <= FX_MIN + 0.05 ? '−∞' : String(Math.round(d) || 0).replace('-', '−'));
+  const renderFx = () => {
+    const f = $('fxfader');
+    if (!f) return;
+    const has = fxDb != null && Number.isFinite(fxDb);
+    const pos = has ? Math.min(1, Math.max(0, (fxDb - FX_MIN) / -FX_MIN)) : 0;
+    f.classList.toggle('off', !has);
+    $('fxcap').style.bottom = `calc(8px + ${pos} * (100% - 16px))`;
+    $('fxv').textContent = has ? fxShort(fxDb) : '—';
+    f.setAttribute('aria-valuenow', has ? fxDb : FX_MIN);
+    f.setAttribute('aria-valuetext', has ? (fxDb <= FX_MIN + 0.05 ? '−∞' : fxDb.toFixed(1) + ' dB') : 'sin dato');
+  };
+  // Envío del retorno FX, mismo ritmo que los canales (como mucho cada 40 ms). Va con k "fx".
+  const pushFx = () => {
+    if (fxDb == null) return;
+    lastSent.set('fx', Date.now());
+    fetch('/api/set', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ m: id, k: 'fx', v: fxDb }) })
+      .then((r) => { if (err()) err().textContent = r.ok ? '' : 'El estudio no aceptó el cambio.'; })
+      .catch(() => { if (err()) err().textContent = 'Sin conexión con el estudio.'; });
+  };
+  const setFx = (db) => {
+    fxDb = db;
+    touched.set('fx', Date.now() + 700);
+    renderFx();
+    clearTimeout(timers.get('fx'));
+    if (Date.now() - (lastSent.get('fx') || 0) > 40) pushFx();
+    else timers.set('fx', setTimeout(pushFx, 40));
+  };
+  const bindFx = () => {
+    const f = $('fxfader');
+    if (!f) return;
+    const fromY = (y) => {
+      if (fxDb == null) return; // sin datos: deshabilitada
+      const r = f.getBoundingClientRect();
+      const p = Math.min(1, Math.max(0, 1 - (y - r.top - 10) / (r.height - 20)));
+      const db = Math.round((FX_MIN + p * -FX_MIN) * 10) / 10;
+      setFx(db <= FX_MIN + 0.05 ? FX_MIN : db);
+    };
+    f.addEventListener('pointerdown', (e) => { f.setPointerCapture(e.pointerId); fromY(e.clientY); });
+    f.addEventListener('pointermove', (e) => { if (f.hasPointerCapture(e.pointerId)) fromY(e.clientY); });
+    f.addEventListener('keydown', (e) => {
+      if (fxDb == null) return;
+      const step = e.shiftKey ? 5 : 1;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowRight') setFx(Math.min(0, fxDb + step));
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') setFx(Math.max(FX_MIN, fxDb - step));
+      else return;
+      e.preventDefault();
+    });
+  };
+
   const stripHtml = (c, i, extra = '') => `
       <div class="strip ${extra}">
         <div class="label" id="lab-${i}">${labelHtml(c)}</div>
@@ -311,6 +368,7 @@ async function showMix(id) {
             <div class="fill" id="fill-${i}"></div>
             <div class="cap" id="cap-${i}"></div>
           </div>
+          ${extra === 'out' ? fxFaderHtml() : ''}
         </div>
         <div class="db" id="db-${i}"></div>
       </div>`;
@@ -374,6 +432,8 @@ async function showMix(id) {
     inCount = chs.length;
     $('body').innerHTML = bodyHtml(chs, master);
     keys.forEach((_, i) => { render(i); bindStrip(i); });
+    bindFx();
+    renderFx();
     bindPager();
     const box = $('strips');
     if (box) box.scrollLeft = prev;
@@ -426,6 +486,11 @@ async function showMix(id) {
     const chs = d.channels || [];
     const master = d.master ?? null;
     cur = { chs, master };
+    // Retorno FX: el valor de TotalMix entra si el músico no lo acaba de mover (guarda de 700 ms, como los canales).
+    if (Date.now() > (touched.get('fx') ?? 0)) {
+      const nfx = master?.fx?.value ?? null;
+      if (nfx !== fxDb) { fxDb = nfx; renderFx(); }
+    }
     const all = allOf(chs, master);
     const same = all.length === keys.length && all.every((c, i) => c.key === keys[i]);
     sync(all);

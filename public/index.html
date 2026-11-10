@@ -126,6 +126,18 @@ h1 {
 .inputs { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .outs { flex: 0 0 84px; width: 84px; min-width: 0; display: flex; }
 .outs .strip { flex: 1 1 auto; }
+/* Fader FX (retorno de TotalMix) dentro de la salida, a la derecha del fader grande (que llega hasta 64 px).
+   Riel fino, capuchón chico con marca verde y valor en dB arriba. Área de toque propia de 20 px. */
+.fxf { position: absolute; right: 0; top: 0; bottom: 0; width: 20px; touch-action: none; cursor: grab; }
+.fxf:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.fxf .rail { position: absolute; left: 9px; width: 2px; top: 12px; bottom: 8px; background: var(--rail); }
+.fxf .cap {
+  position: absolute; left: 4px; width: 12px; height: 7px; margin-bottom: -3.5px;
+  background: linear-gradient(180deg, #cacaca 0%, #858585 60%, #4d4d4d 100%); border-radius: 1px; box-shadow: 0 1px 2px #000a;
+}
+.fxf .cap::after { content: ""; position: absolute; left: 2px; right: 2px; top: 3px; height: 1px; background: #5fd35f; }
+.fxf .fxv { position: absolute; left: 0; right: 0; top: 0; font: 400 9px/10px var(--mono); text-align: center; color: var(--value); white-space: nowrap; overflow: hidden; }
+.fxf.off { opacity: .35; pointer-events: none; }
 .outs .strip.out { background: var(--strip-out); }
 .outs .strip.off { opacity: .4; }
 .outs .strip.off .body { min-height: 200px; }
