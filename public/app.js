@@ -33,6 +33,11 @@ const labelHtml = (c) => `<b>${esc(c.label)}</b><small>${esc(c.sub)}</small>`;
 // (0, 60, 20, 40, 10, 6). La rayita siempre se queda.
 const SCALE_PRI = { 0: 0, 60: 1, 20: 2, 40: 3, 10: 4, 6: 5 };
 function fitScale() {
+  // Solo actúa en el horizontal bajo: el 320 px vive en un único sitio, el @media de index.html,
+  // que pone --scale-fit en 1. Fuera de ahí no se oculta ninguna etiqueta.
+  const narrow = getComputedStyle(document.documentElement).getPropertyValue('--scale-fit').trim() === '1';
+  document.querySelectorAll('.fader .tick b.hid').forEach((b) => b.classList.remove('hid'));
+  if (!narrow) return;
   document.querySelectorAll('.fader').forEach((f) => {
     const H = f.clientHeight;
     const marks = [...f.querySelectorAll('.tick')].map((t) => {
