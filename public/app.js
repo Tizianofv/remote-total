@@ -303,7 +303,9 @@ async function showMix(id) {
   // Fader FX (retorno de TotalMix, master.fx): pequeño, dentro de la salida, a la derecha del fader grande.
   // Lineal en dB de -65 a 0 (-65 = apagado, se ve -∞). Sin medidor. Su área de toque es propia (no mueve el grande).
   const fxFaderHtml = () => `<div class="fxf" id="fxfader" tabindex="0" role="slider" aria-label="Retorno FX" aria-valuemin="${FX_MIN}" aria-valuemax="0">
-            <div class="rail"></div><div class="cap" id="fxcap"></div><b class="fxv" id="fxv">—</b><span class="fxl">FX</span>
+            <b class="fxv" id="fxv">—</b>
+            <div class="fxtrack" id="fxtrack"><div class="rail"></div><div class="lvl"></div><div class="cap" id="fxcap"></div></div>
+            <span class="fxl">FX</span>
           </div>`;
   const fxShort = (d) => (d <= FX_MIN + 0.05 ? '−∞' : String(Math.round(d) || 0).replace('-', '−'));
   const renderFx = () => {
@@ -312,7 +314,8 @@ async function showMix(id) {
     const has = fxDb != null && Number.isFinite(fxDb);
     const pos = has ? Math.min(1, Math.max(0, (fxDb - FX_MIN) / -FX_MIN)) : 0;
     f.classList.toggle('off', !has);
-    $('fxcap').style.bottom = `calc(15px + ${pos} * (100% - 30px))`;
+    f.style.setProperty('--p', pos);
+    $('fxcap').style.bottom = `calc(${pos} * (100% - 17px))`;
     $('fxv').textContent = has ? fxShort(fxDb) : '—';
     f.setAttribute('aria-valuenow', has ? fxDb : FX_MIN);
     f.setAttribute('aria-valuetext', has ? (fxDb <= FX_MIN + 0.05 ? '−∞' : fxDb.toFixed(1) + ' dB') : 'sin dato');
@@ -338,8 +341,9 @@ async function showMix(id) {
     if (!f) return;
     const fromY = (y) => {
       if (fxDb == null) return; // sin datos: deshabilitada
-      const r = f.getBoundingClientRect();
-      const p = Math.min(1, Math.max(0, 1 - (y - r.top - 10) / (r.height - 20)));
+      // La pista del FX es más corta que el área de toque: el dedo se mide contra el riel (clamp en los extremos).
+      const r = $('fxtrack').getBoundingClientRect();
+      const p = Math.min(1, Math.max(0, 1 - (y - r.top - 8.5) / (r.height - 17)));
       const db = Math.round((FX_MIN + p * -FX_MIN) * 10) / 10;
       setFx(db <= FX_MIN + 0.05 ? FX_MIN : db);
     };
