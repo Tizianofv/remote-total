@@ -136,7 +136,7 @@ h1 {
    por 17 de alto (x 52-64, y 138-154), que es unas 80 % x 65 % del capuchón grande (16 x 26 px). Bordes claros
    #6b808e / #758a99 / #78909f, interior #2d3438, raya verde de 4 x 2 px en el medio. Barra verde de 3 px bajo el
    capuchón (#00ae29, borde #048e24) hasta el final del riel. La pista va en .fxtrack: termina a 10 px del fondo, igual que el riel grande. */
-.fxf .fxtrack { position: absolute; left: 0; right: 0; bottom: 10px; height: calc((100% - 20px) * 0.5); }
+.fxf .fxtrack { position: absolute; left: 0; right: 0; bottom: 17px; height: calc((100% - 20px) * 0.5); }
 .fxf .rail { position: absolute; left: 8px; width: 4px; top: 0; bottom: 0; background: #1f2427; }
 .fxf .lvl { position: absolute; left: 8px; width: 3px; bottom: 0; height: calc(var(--p, 0) * (100% - 17px)); background: #00ae29; border: 1px solid #048e24; border-width: 0 1px 0 0; box-sizing: border-box; }
 .fxf .cap {
@@ -146,7 +146,7 @@ h1 {
 .fxf .cap::after { content: ""; position: absolute; left: 3px; width: 4px; top: 6px; height: 2px; background: #00ae29; }
 /* Valor en dB encima del riel (0..10 px) y "FX" debajo del final del riel. */
 .fxf .fxv { position: absolute; left: 0; right: 0; top: calc(50% - 12px); font: 400 9px/10px var(--mono); text-align: center; color: var(--value); white-space: nowrap; overflow: hidden; }
-.fxf .fxl { position: absolute; left: 0; right: 0; bottom: 0; font: 400 9px/10px var(--mono); text-align: center; color: var(--sub); }
+.fxf .fxl { position: absolute; left: 0; right: 0; bottom: 0; font: 700 12px/12px var(--display); text-align: center; color: #00ae29; }
 .fxf.off { opacity: .35; pointer-events: none; }
 .outs .strip.out { background: var(--strip-out); }
 .outs .strip.off { opacity: .4; }
