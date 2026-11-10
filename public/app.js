@@ -125,10 +125,16 @@ if (fsSupported) {
   document.addEventListener('webkitfullscreenchange', fsSync);
 }
 
-function header(extra = '') {
+// En la mezcla (`centerFs`) el botón de pantalla completa va en su propio hueco (.fsslot), centrado entre el logo
+// y el estado. En elegir rol la cabecera no cambia: el botón queda junto al estado.
+function header(extra = '', centerFs = false) {
+  const fsBtn = fsSupported ? `<button class="fs" id="fsbtn" type="button" aria-label="${fsAttrs().label}" title="${fsAttrs().label}">${fsAttrs().icon}</button>` : '';
+  const status = `<div class="status" id="status"><span class="dot"></span><span id="stxt">TotalMix</span></div>`;
+  const brand = `<div class="brand">${document.getElementById('logo-tpl').innerHTML}</div>`;
+  if (centerFs) return `<div class="top">${brand}<div class="fsslot">${fsBtn}</div><div class="topr">${status}</div></div>${extra}`;
   return `<div class="top">
-    <div class="brand">${document.getElementById('logo-tpl').innerHTML}</div>
-    <div class="topr">${fsSupported ? `<button class="fs" id="fsbtn" type="button" aria-label="${fsAttrs().label}" title="${fsAttrs().label}">${fsAttrs().icon}</button>` : ''}<div class="status" id="status"><span class="dot"></span><span id="stxt">TotalMix</span></div></div>
+    ${brand}
+    <div class="topr">${fsBtn}${status}</div>
   </div>${extra}`;
 }
 function setStatus(ok, text) {
@@ -223,7 +229,7 @@ async function showMix(id) {
         <div class="route">Mezcla → <b id="out">${esc(data.out)}</b></div>
       </div>
       <button class="back" id="back">Cambiar</button>
-    </div>`) + `
+    </div>`, true) + `
     <div id="body"></div>
     <p class="foot">Los nombres los pone el técnico</p>`;
 
