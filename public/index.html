@@ -130,13 +130,18 @@ h1 {
    Riel fino, capuchón chico con marca verde y valor en dB arriba. Área de toque propia de 20 px. */
 .fxf { position: absolute; right: 0; top: 0; bottom: 0; width: 20px; touch-action: none; cursor: grab; }
 .fxf:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.fxf .rail { position: absolute; left: 9px; width: 2px; top: 12px; bottom: 8px; background: var(--rail); }
+/* Medidas de la captura totalmix-salida-guitarra.png (75 px de alto de la tira ~317): riel de 8 px con paredes
+   #2d3438 y canal central de 4 px #1f2427 (x 57-60); capuchón de 8 x 9 px #2d3438 con marca verde #00ae29 de 4 x 2 px. */
+.fxf .rail { position: absolute; left: 6px; width: 8px; top: 15px; bottom: 15px; background: #2d3438; }
+.fxf .rail::before { content: ""; position: absolute; left: 2px; width: 4px; top: 0; bottom: 0; background: #1f2427; }
 .fxf .cap {
-  position: absolute; left: 4px; width: 12px; height: 7px; margin-bottom: -3.5px;
-  background: linear-gradient(180deg, #cacaca 0%, #858585 60%, #4d4d4d 100%); border-radius: 1px; box-shadow: 0 1px 2px #000a;
+  position: absolute; left: 6px; width: 8px; height: 9px; margin-bottom: -4.5px;
+  background: #2d3438; box-shadow: 0 1px 2px #000a;
 }
-.fxf .cap::after { content: ""; position: absolute; left: 2px; right: 2px; top: 3px; height: 1px; background: #5fd35f; }
+.fxf .cap::after { content: ""; position: absolute; left: 2px; right: 2px; top: 2px; height: 2px; background: #00ae29; }
+/* Valor en dB arriba (0..10 px) y "FX" abajo (letra de la piel, color de etiqueta); el riel corre entre los dos. */
 .fxf .fxv { position: absolute; left: 0; right: 0; top: 0; font: 400 9px/10px var(--mono); text-align: center; color: var(--value); white-space: nowrap; overflow: hidden; }
+.fxf .fxl { position: absolute; left: 0; right: 0; bottom: 0; font: 400 9px/10px var(--mono); text-align: center; color: var(--sub); }
 .fxf.off { opacity: .35; pointer-events: none; }
 .outs .strip.out { background: var(--strip-out); }
 .outs .strip.off { opacity: .4; }
