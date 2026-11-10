@@ -98,7 +98,7 @@ if (fsSupported) {
 
 function header(extra = '') {
   return `<div class="top">
-    <div class="brand"><b>Remote</b> Total</div>
+    <div class="brand">${document.getElementById('logo-tpl').innerHTML}</div>
     <div class="topr">${fsSupported ? `<button class="fs" id="fsbtn" type="button" aria-label="${fsAttrs().label}" title="${fsAttrs().label}">${fsAttrs().icon}</button>` : ''}<div class="status" id="status"><span class="dot"></span><span id="stxt">TotalMix</span></div></div>
   </div>${extra}`;
 }
