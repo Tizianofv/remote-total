@@ -136,6 +136,8 @@ function setStatus(ok, text) {
   if (!s) return;
   s.classList.toggle('off', !ok);
   $('stxt').textContent = text;
+  // En la mezcla el texto no se ve (solo el punto): va en aria-label y title. En elegir rol no cambia nada.
+  if (app.classList.contains('mix')) { s.setAttribute('aria-label', text); s.setAttribute('title', text); }
 }
 
 // Sale de la pantalla actual: para timers, stream y animaciones, e invalida respuestas pendientes.
