@@ -152,12 +152,14 @@ async function showPicker() {
   leave();
   const g = gen;
   app.classList.remove('mix');
+  app.classList.add('pick');
   let timer = 0;
   let shown = null; // firma de la lista pintada: solo se repinta si cambia
   cleanup = () => clearTimeout(timer);
   history.replaceState(null, '', location.pathname);
   app.innerHTML = header() + `
     <div>
+      <p class="kicker">Caribbean Dream Studios</p>
       <h1>Tu Sonido!!</h1>
       <p class="lede">Elige quién eres en la sesión</p>
     </div>
@@ -182,8 +184,9 @@ async function showPicker() {
             <b style="display:block;font:800 18px/1.2 var(--f-title);text-transform:uppercase;letter-spacing:.04em;color:var(--fg);margin-bottom:6px">Esperando a TotalMix…</b>
             Los roles son las salidas de TotalMix.</p>`;
         } else {
-          grid.innerHTML = list.map((m) => `
+          grid.innerHTML = list.map((m, i) => `
             <button class="who" data-id="${esc(m.id)}">
+              <span class="num" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span>
               <span class="name">${esc(m.name)}</span>
               <span class="out">${esc(m.out)}</span>
             </button>`).join('');
@@ -211,6 +214,7 @@ async function showMix(id) {
   store('rol', id);
   history.replaceState(null, '', '?m=' + encodeURIComponent(id));
 
+  app.classList.remove('pick');
   app.classList.add('mix');
   app.innerHTML = header(`
     <div class="mixhead">
