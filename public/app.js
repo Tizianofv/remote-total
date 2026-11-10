@@ -40,16 +40,23 @@ async function api(p, opts) {
 }
 
 // ---- Pantalla completa ----
-// El navegador solo deja entrar con un gesto del usuario. El primer toque de la página (cualquiera, una vez por carga)
-// pide pantalla completa; ese toque sigue haciendo lo suyo. Si el usuario sale con el botón, el primer toque no la vuelve a pedir.
+// El navegador solo deja entrar con un gesto del usuario, y en el celular ese gesto llega con pointerup/click
+// (no con pointerdown del tacto). Se pide en cada toque o arrastre que termina, mientras no esté en pantalla completa
+// y el usuario no haya salido a propósito con el botón. Un intento rechazado no gasta nada: se reintenta en el siguiente toque.
 const fsSupported = !!((document.documentElement.requestFullscreen && document.fullscreenEnabled) ||
   (document.documentElement.webkitRequestFullscreen && document.webkitFullscreenEnabled));
 const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+let fsUserExited = false; // true tras salir con el botón; vuelve a false al pulsar Completa (o al recargar)
+let fsPending = false;    // hay una petición en vuelo: no se lanza otra encima
 function fsEnter() {
+  if (fsPending) return;
   try {
     const el = document.documentElement;
     const p = el.requestFullscreen ? el.requestFullscreen() : el.webkitRequestFullscreen();
-    if (p && p.catch) p.catch(() => {}); // rechazado (sin gesto, o sin permiso): se ignora
+    if (p && p.then) {
+      fsPending = true;
+      p.then(() => { fsPending = false; }, () => { fsPending = false; }); // rechazado: se ignora, nada queda gastado
+    }
   } catch {}
 }
 function fsExit() {
@@ -66,16 +73,19 @@ function fsSync() {
   b.setAttribute('aria-pressed', fsEl() ? 'true' : 'false');
 }
 if (fsSupported) {
-  let firstTouchDone = false;
-  document.addEventListener('pointerdown', (e) => {
-    if (firstTouchDone) return;
-    firstTouchDone = true;
-    if (e.target.closest && e.target.closest('#fsbtn')) return; // el botón hace su propio toggle
-    if (!fsEl()) fsEnter();
-  }, { capture: true });
+  const onBtn = (e) => !!(e.target.closest && e.target.closest('#fsbtn'));
+  // Un toque o arrastre que termina (pointerup) y el click de respaldo (teclado, accesibilidad) piden pantalla completa.
+  // Fase de captura y sin cancelar: la acción del toque sigue igual.
+  const autoEnter = (e) => {
+    if (onBtn(e) || fsUserExited || fsEl()) return;
+    fsEnter();
+  };
+  document.addEventListener('pointerup', autoEnter, { capture: true });
+  document.addEventListener('click', autoEnter, { capture: true });
   document.addEventListener('click', (e) => {
-    if (!e.target.closest || !e.target.closest('#fsbtn')) return;
-    if (fsEl()) fsExit(); else fsEnter();
+    if (!onBtn(e)) return;
+    if (fsEl()) { fsUserExited = true; fsExit(); }
+    else { fsUserExited = false; fsEnter(); }
   });
   document.addEventListener('fullscreenchange', fsSync);
   document.addEventListener('webkitfullscreenchange', fsSync);
