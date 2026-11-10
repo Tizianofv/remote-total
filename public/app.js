@@ -1,10 +1,13 @@
 'use strict';
 // Pantalla del músico: elegir rol y mover su mezcla. Habla con server.js.
 // Los canales se identifican por `key` (no por posición); la lista puede crecer, cambiar o quedar vacía.
+// Cada rol tiene además su salida (`master`, key "out"): fija a la derecha, siempre visible.
 
 const app = document.getElementById('app');
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const VISIBLE = 4;
+const STRIP_W = 76;   // ancho mínimo de un canal (px), con la escala de la captura
+const GAP = 2;        // separación entre canales (px)
+const OUT_W = 84;     // ancho fijo de la salida del rol (px)
 let cleanup = () => {};
 let gen = 0; // cambia al salir de cada pantalla; las respuestas viejas se descartan
 
@@ -21,6 +24,8 @@ const dbPos = (d) => Math.min(1, Math.max(0, (d >= -6 ? (d + 26.8235294118) / 0.
 const ZERO = dbPos(0); // posición de 0 dB
 const fmtDb = (d) => (d === -Infinity ? '−∞' : (d > 0.05 ? '+' : d < -0.05 ? '−' : '') + Math.abs(d).toFixed(1));
 const levelToMeter = (db) => (db == null || !Number.isFinite(db) ? 0 : Math.min(1, Math.max(0, (db + 60) / 60)));
+const peakText = (c) => (c.level == null ? '—' : fmtDb(c.level));
+const labelHtml = (c) => `<b>${esc(c.label)}</b><small>${esc(c.sub)}</small>`;
 
 function store(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} }
 function recall(k) { try { return localStorage.getItem(k); } catch { return null; } }
@@ -120,8 +125,11 @@ async function showMix(id) {
 
   $('back').onclick = () => { store('rol', null); showPicker(); };
 
-  // Estado por clave de canal (key).
-  let keys = [];                 // claves pintadas, en orden de pantalla
+  // Estado por clave de canal (key). La salida del rol es la clave "out".
+  let keys = [];                 // claves pintadas: canales de entrada y, al final, la salida (si hay)
+  let inCount = 0;               // cuántos canales de entrada hay pintados
+  let visible = 3;               // canales de entrada que caben por página
+  let cur = { chs: data.channels || [], master: data.master ?? null }; // lo último recibido
   const val = new Map();         // valor 0..1 o null (lo que muestra el fader)
   const touched = new Map();     // hasta cuándo ignorar lo que llega de TotalMix (guarda de 700 ms)
   const meter = new Map();       // nivel suavizado del medidor
@@ -164,6 +172,7 @@ async function showMix(id) {
 
   const bindStrip = (i) => {
     const f = $(`fader-${i}`);
+    if (!f) return; // salida sin datos: no hay fader
     const fromY = (y) => {
       const r = f.getBoundingClientRect();
       change(i, 1 - (y - r.top - 10) / (r.height - 20));
@@ -180,10 +189,8 @@ async function showMix(id) {
     });
   };
 
-  const labelHtml = (c) => `<b>${esc(c.label)}</b><small>${esc(c.sub)}</small>`;
-  const peakText = (c) => (c.level == null ? '—' : fmtDb(c.level));
-  const stripHtml = (c, i) => `
-      <div class="strip ${i === 0 ? 'me' : ''}">
+  const stripHtml = (c, i, extra = '') => `
+      <div class="strip ${extra}">
         <div class="label" id="lab-${i}">${labelHtml(c)}</div>
         <div class="peak" id="pk-${i}">${peakText(c)}</div>
         <div class="body">
@@ -199,73 +206,98 @@ async function showMix(id) {
         <div class="db" id="db-${i}"></div>
       </div>`;
 
-  const bodyHtml = (chs) => {
-    if (!chs.length) {
-      return `<div class="hint" style="padding:26px 8px">
-        <b style="display:block;font:700 17px/1.25 var(--display);color:var(--text);margin-bottom:8px">Todavía no hay canales en tu mezcla.</b>
-        Pídele al ingeniero que suba en TotalMix los canales que quieres escuchar.</div>
-        <p id="err"></p>`;
-    }
-    const paged = chs.length > VISIBLE;
-    return `${paged ? `<div class="pager">
-      <button class="pg" id="pgl" aria-label="Faders anteriores">‹</button>
-      <span id="pgtxt"></span>
-      <button class="pg" id="pgr" aria-label="Más faders">›</button>
-    </div>` : ''}
-    <div class="strips ${paged ? 'scroll' : ''}" id="strips" style="--n:${Math.min(chs.length, VISIBLE)}">${chs.map(stripHtml).join('')}
+  // Salida del rol sin datos de TotalMix: se ve, deshabilitada.
+  const outOffHtml = `
+      <div class="strip out off" aria-disabled="true">
+        <div class="label"><b>Salida</b><small>sin datos</small></div>
+        <div class="peak">—</div>
+        <div class="body"></div>
+        <div class="db">—</div>
+      </div>`;
+
+  const bodyHtml = (chs, master) => {
+    const paged = chs.length > visible;
+    const inputs = !chs.length
+      ? `<div class="hint" style="padding:26px 8px">
+          <b style="display:block;font:700 17px/1.25 var(--display);color:var(--text);margin-bottom:8px">Todavía no hay canales en tu mezcla.</b>
+          Pídele al ingeniero que suba en TotalMix los canales que quieres escuchar.</div>`
+      : `${paged ? `<div class="pager">
+          <button class="pg" id="pgl" aria-label="Faders anteriores">‹</button>
+          <span id="pgtxt"></span>
+          <button class="pg" id="pgr" aria-label="Más faders">›</button>
+        </div>` : ''}
+        <div class="strips ${paged ? 'scroll' : ''}" id="strips" style="--n:${Math.min(chs.length, visible)}">${chs.map((c, i) => stripHtml(c, i, i === 0 ? 'me' : '')).join('')}
+        </div>`;
+    const outs = master ? stripHtml(master, chs.length, 'out') : outOffHtml;
+    return `<div class="rack">
+      <div class="inputs">${inputs}</div>
+      <div class="outs">${outs}</div>
     </div>
     <p id="err"></p>`;
   };
 
   // Mantiene valores y medidores de cada clave; quita lo que ya no existe.
-  const sync = (chs) => {
-    const live = new Set(chs.map((c) => c.key));
+  const sync = (all) => {
+    const live = new Set(all.map((c) => c.key));
     for (const k of [...val.keys()]) {
       if (live.has(k)) continue;
       val.delete(k); meter.delete(k); target.delete(k); touched.delete(k); lastSent.delete(k);
       clearTimeout(timers.get(k)); timers.delete(k);
     }
-    chs.forEach((c) => {
+    all.forEach((c) => {
       if (!val.has(c.key)) val.set(c.key, c.value ?? null);
       if (!meter.has(c.key)) meter.set(c.key, 0);
       target.set(c.key, levelToMeter(c.level));
     });
   };
 
-  // Pinta el cuerpo (paginado, faders o mensaje vacío) con la lista de canales dada.
-  const mount = (chs) => {
+  const allOf = (chs, master) => (master ? [...chs, master] : chs);
+
+  // Cuántos canales de entrada caben: el ancho del cuerpo menos la salida fija.
+  const visibleNow = () => Math.max(1, Math.floor(($('body').clientWidth - OUT_W) / (STRIP_W + GAP)));
+
+  // Pinta el cuerpo (paginado, faders o mensaje vacío) y la salida fija a la derecha.
+  const mount = (chs, master) => {
     const prev = $('strips')?.scrollLeft ?? 0;
-    keys = chs.map((c) => c.key);
-    $('body').innerHTML = bodyHtml(chs);
+    visible = visibleNow();
+    keys = allOf(chs, master).map((c) => c.key);
+    inCount = chs.length;
+    $('body').innerHTML = bodyHtml(chs, master);
     keys.forEach((_, i) => { render(i); bindStrip(i); });
-    chs.forEach((c, i) => { const pk = $(`pk-${i}`); if (pk) pk.textContent = peakText(c); });
     bindPager();
     const box = $('strips');
     if (box) box.scrollLeft = prev;
   };
 
-  // Paginado de a 4 cuando hay más faders.
+  // Paginado de a `visible` canales de entrada cuando hay más.
   const bindPager = () => {
     const box = $('strips');
-    if (!box || keys.length <= VISIBLE) return;
-    const stepW = () => box.querySelector('.strip').getBoundingClientRect().width + 8;
+    if (!box || inCount <= visible) return;
+    const stepW = () => (box.clientWidth + GAP) / visible;
     const update = () => {
       if (!$('pgtxt')) return;
       const first = Math.round(box.scrollLeft / stepW());
-      const last = Math.min(keys.length, first + VISIBLE);
-      $('pgtxt').textContent = `Faders ${first + 1}–${last} de ${keys.length}`;
+      const last = Math.min(inCount, first + visible);
+      $('pgtxt').textContent = `Faders ${first + 1}–${last} de ${inCount}`;
       $('pgl').disabled = first === 0;
-      $('pgr').disabled = last >= keys.length;
+      $('pgr').disabled = last >= inCount;
     };
     box.addEventListener('scroll', () => requestAnimationFrame(update), { passive: true });
-    $('pgl').onclick = () => box.scrollBy({ left: -stepW() * VISIBLE, behavior: reduce ? 'auto' : 'smooth' });
-    $('pgr').onclick = () => box.scrollBy({ left: stepW() * VISIBLE, behavior: reduce ? 'auto' : 'smooth' });
+    $('pgl').onclick = () => box.scrollBy({ left: -stepW() * visible, behavior: reduce ? 'auto' : 'smooth' });
+    $('pgr').onclick = () => box.scrollBy({ left: stepW() * visible, behavior: reduce ? 'auto' : 'smooth' });
     update();
   };
 
-  const initial = data.channels || [];
-  sync(initial);
-  mount(initial);
+  sync(allOf(cur.chs, cur.master));
+  mount(cur.chs, cur.master);
+
+  // Al girar el celular o cambiar el ancho, se recalcula cuántos faders caben.
+  let rt = 0;
+  const onResize = () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => { if (visibleNow() !== visible) mount(cur.chs, cur.master); }, 150);
+  };
+  window.addEventListener('resize', onResize);
 
   // Valores y niveles en vivo desde TotalMix.
   const es = new EventSource('/api/stream?m=' + encodeURIComponent(id));
@@ -278,10 +310,13 @@ async function showMix(id) {
     if (d.name) $('title').textContent = d.name;
     if (d.out != null) $('out').textContent = d.out;
     const chs = d.channels || [];
-    const same = chs.length === keys.length && chs.every((c, i) => c.key === keys[i]);
-    sync(chs);
-    if (!same) mount(chs); // se añadieron, quitaron o reordenaron canales: repintar conservando valores
-    chs.forEach((c, i) => {
+    const master = d.master ?? null;
+    cur = { chs, master };
+    const all = allOf(chs, master);
+    const same = all.length === keys.length && all.every((c, i) => c.key === keys[i]);
+    sync(all);
+    if (!same) mount(chs, master); // se añadieron, quitaron o reordenaron canales: repintar conservando valores
+    all.forEach((c, i) => {
       const lab = $(`lab-${i}`);
       const html = labelHtml(c);
       if (lab && lab.innerHTML !== html) lab.innerHTML = html;
@@ -314,6 +349,8 @@ async function showMix(id) {
   cleanup = () => {
     es.close();
     cancelAnimationFrame(raf);
+    clearTimeout(rt);
+    window.removeEventListener('resize', onResize);
     for (const t of timers.values()) clearTimeout(t);
   };
 }
