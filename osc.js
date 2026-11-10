@@ -21,7 +21,8 @@ function encodeMessage(address, floats = []) {
 }
 
 function readString(buf, offset) {
-  const end = buf.indexOf(0, offset);
+  let end = buf.indexOf(0, offset);
+  if (end < 0) end = buf.length;
   const str = buf.toString('utf8', offset, end);
   return { str, next: Math.ceil((end + 1) / 4) * 4 };
 }
