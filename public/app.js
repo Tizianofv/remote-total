@@ -125,8 +125,8 @@ async function showPicker() {
   history.replaceState(null, '', location.pathname);
   app.innerHTML = header() + `
     <div>
-      <h1>¿Cuál es tu <span>rol</span>?</h1>
-      <p class="lede">Elige qué tocas en la sesión y controla lo que escuchas en tus audífonos.</p>
+      <h1>TU MEZCLA</h1>
+      <p class="lede">Elige quién eres en la sesión</p>
     </div>
     <div class="grid" id="grid"></div>
     <p id="err"></p>`;
@@ -141,7 +141,7 @@ async function showPicker() {
       if (!list.length) {
         // TotalMix aún no ha respondido: reintentar hasta que haya roles.
         grid.innerHTML = `<p class="hint" style="padding:22px 0 0">
-          <b style="display:block;font:700 18px/1.2 var(--display);color:var(--text);margin-bottom:6px">Esperando a TotalMix…</b>
+          <b style="display:block;font:800 18px/1.2 var(--f-title);text-transform:uppercase;letter-spacing:.04em;color:var(--fg);margin-bottom:6px">Esperando a TotalMix…</b>
           Los roles son las salidas de TotalMix.</p>`;
         timer = setTimeout(load, 3000);
         return;
@@ -181,7 +181,7 @@ async function showMix(id) {
       <button class="back" id="back">Cambiar</button>
     </div>`) + `
     <div id="body"></div>
-    <p class="foot">Nombres y canales vienen de TotalMix</p>`;
+    <p class="foot">Los nombres los pone el técnico</p>`;
 
   $('back').onclick = () => { store('rol', null); showPicker(); };
 
@@ -283,14 +283,14 @@ async function showMix(id) {
     const paged = chs.length > visible;
     const inputs = !chs.length
       ? `<div class="hint" style="padding:26px 8px">
-          <b style="display:block;font:700 17px/1.25 var(--display);color:var(--text);margin-bottom:8px">Todavía no hay canales en tu mezcla.</b>
+          <b style="display:block;font:800 17px/1.25 var(--f-title);text-transform:uppercase;letter-spacing:.04em;color:var(--fg);margin-bottom:8px">Todavía no hay canales en tu mezcla.</b>
           Pídele al ingeniero que suba en TotalMix los canales que quieres escuchar.</div>`
       : `${paged ? `<div class="pager">
           <button class="pg" id="pgl" aria-label="Faders anteriores">‹</button>
           <span id="pgtxt"></span>
           <button class="pg" id="pgr" aria-label="Más faders">›</button>
         </div>` : ''}
-        <div class="strips ${paged ? 'scroll' : ''}" id="strips" style="--n:${Math.min(chs.length, visible)}">${chs.map((c, i) => stripHtml(c, i, i === 0 ? 'me' : '')).join('')}
+        <div class="strips ${paged ? 'scroll' : ''}" id="strips" style="--n:${Math.min(chs.length, visible)}">${chs.map((c, i) => stripHtml(c, i)).join('')}
         </div>`;
     const outs = master ? stripHtml(master, chs.length, 'out') : outOffHtml;
     return `<div class="rack">
