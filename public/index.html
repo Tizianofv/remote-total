@@ -3,29 +3,32 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#14181b">
+<meta name="theme-color" content="#394147">
 <title>Mi mezcla</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Roboto+Mono:wght@400;500&display=swap">
 <style>
-/* Piel de consola RME TotalMix FX. Colores medidos en la captura totalmix.webp (ver comentario en cada token).
-   Medido = leído de píxeles de la captura. Aprox = convención visual, no medida. */
+/* Piel de consola RME TotalMix FX. Colores medidos en la captura de un canal (fader-mic1.png, 75x302 px)
+   y en totalmix.webp. "medido" = leído de un píxel; "aprox" = convención visual sin medir. Pixel entre paréntesis. */
 :root {
-  --ink: #14181b;          /* fondo de la ventana (medido #14181b) */
-  --strip: #384147;        /* cuerpo de canal de entrada (medido #384147) */
-  --strip-out: #252c2e;    /* cuerpo de canal de salida (medido #252c2e) */
-  --edge: #14181b;         /* separación entre canales (aprox, borde oscuro) */
-  --text: #d9e1ea;          /* nombre del canal (medido #d9e1ea) */
-  --muted: #8694a0;         /* lecturas dB (medido #8694a0) */
-  --dim: #5e6567;           /* etiqueta de hardware (medido #5e6567) */
-  --well: #313c41;          /* fondo del medidor (medido #313c41) */
-  --rail: #32383f;          /* riel del fader (medido #32383f) */
-  --green: #2dc337;         /* medidor (medido #2dc337) */
-  --yellow: #e8c53a;        /* medidor alto (aprox) */
-  --red: #e5533d;           /* medidor en clip (aprox) */
-  --orange: #b58c7a;        /* canal seleccionado, marca naranja (medido #b58c7a) */
-  --talk: #354756;          /* cabecera azul tipo Talk (medido #354756) */
-  --ok: #2dc337;
+  --ink: #14181b;          /* fondo de la ventana (medido totalmix.webp, 1400,850) */
+  --strip: #394147;        /* cuerpo del canal (medido fader-mic1, x=0,y=0) */
+  --strip-out: #252c2e;    /* cuerpo de canal de salida (medido totalmix.webp, DRUMMER) */
+  --edge: #010101;         /* borde negro entre canales (medido fader-mic1, x=74) */
+  --text: #d0dce8;         /* nombre del canal (medido fader-mic1, 22,2) */
+  --sub: #637984;          /* etiqueta de hardware (medido fader-mic1, 20,35) */
+  --peak: #839dad;         /* lectura de pico (medido fader-mic1, 28,92) */
+  --value: #c7c7c8;        /* lectura de fader (medido fader-mic1, 42,291) */
+  --scale: #5d737d;        /* números de escala (medido fader-mic1, 14,143) */
+  --tick: #697e88;         /* rayitas de escala (medido fader-mic1, 25,144) */
+  --well: #313b41;         /* fondo del medidor (medido fader-mic1, 12,120) */
+  --rail: #1b2022;         /* riel del fader, centro oscuro (medido fader-mic1, 35,120) */
+  --rail-edge: #30383d;    /* borde del riel (medido fader-mic1, 37,120) */
+  --valbox: #283136;       /* caja de lectura abajo (medido fader-mic1, 10,285) */
+  --green: #19d120;        /* medidor (medido fader-mic1, 11,272) */
+  --yellow: #e8c53a;       /* medidor alto (aprox, no medido) */
+  --red: #e5533d;          /* medidor en clip (aprox, no medido) */
+  --orange: #b58c7a;       /* canal propio marcado (medido totalmix.webp, 655,205) */
   --display: "Roboto Condensed", "Arial Narrow", Tahoma, sans-serif;
   --body: "Roboto Condensed", Tahoma, Verdana, sans-serif;
   --mono: "Roboto Mono", Consolas, Menlo, monospace;
@@ -60,97 +63,94 @@ body {
   border: 1px solid var(--edge); padding: 4px 8px;
 }
 .status.off .dot { background: var(--red); }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
-.demo { font: 500 11px/1 var(--mono); color: var(--yellow); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
 
 h1 { font: 700 clamp(24px, 8vw, 30px)/1.1 var(--display); margin: 4px 0 0; text-wrap: balance; color: var(--text); }
 h1 span { color: var(--orange); }
-.lede { color: var(--muted); margin: 6px 0 0; max-width: 40ch; font-size: 14px; }
+.lede { color: var(--sub); margin: 6px 0 0; max-width: 40ch; font-size: 14px; }
 
 /* ---- Pantalla 1: elegir rol. Cada tarjeta es una salida de TotalMix ---- */
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
 .who {
   position: relative; text-align: left; cursor: pointer; font: inherit; color: var(--text);
-  background: var(--strip-out); border: 1px solid var(--edge); border-radius: 0;
+  background: var(--strip-out); border: 0; border-right: 1px solid var(--edge); border-radius: 0;
   padding: 0 0 8px; display: flex; flex-direction: column; gap: 6px; overflow: hidden; min-width: 0;
 }
-.who:hover, .who:focus-visible { border-color: var(--orange); outline: none; }
+.who:hover, .who:focus-visible { outline: 2px solid var(--orange); outline-offset: -2px; }
 .who .name { display: block; background: var(--strip); padding: 8px 10px; font: 700 16px/1.1 var(--display); overflow-wrap: anywhere; }
-.who .out { font: 400 11px/1.2 var(--mono); color: var(--dim); margin-inline: 10px; }
+.who .out { font: 400 11px/1.2 var(--mono); color: var(--sub); margin-inline: 10px; }
 .who .mini { display: flex; gap: 2px; height: 16px; align-items: flex-end; margin-inline: 10px; }
 .who .mini i { flex: 1; background: var(--well); height: 30%; }
 .who.busy .mini i { background: var(--green); }
-.who .tag { position: absolute; top: 8px; right: 8px; font: 500 10px/1 var(--mono); color: var(--text); background: var(--orange); padding: 2px 4px; }
-.hint { font: 400 12px/1.4 var(--mono); color: var(--muted); text-align: center; }
+.hint { font: 400 12px/1.4 var(--mono); color: var(--sub); text-align: center; }
 
 /* ---- Pantalla 2: mezcla ---- */
 .mixhead { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
 .back {
-  background: var(--strip); border: 1px solid var(--edge); color: var(--text); border-radius: 0;
+  background: var(--strip); border: 0; color: var(--text); border-radius: 0;
   font: 700 13px/1 var(--display); padding: 9px 12px; cursor: pointer;
 }
-.back:focus-visible, .back:hover { border-color: var(--orange); outline: none; }
-.route { font: 400 12px/1.3 var(--mono); color: var(--muted); margin-top: 6px; }
+.back:focus-visible, .back:hover { outline: 2px solid var(--orange); outline-offset: 1px; }
+.route { font: 400 12px/1.3 var(--mono); color: var(--sub); margin-top: 6px; }
 .route b { color: var(--text); font-weight: 500; }
 
-.strips { display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: 3px; }
+.strips { display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: 0; background: var(--edge); }
 .strips.scroll {
   grid-template-columns: none; grid-auto-flow: column;
-  grid-auto-columns: calc((100% - 3px * (var(--n) - 1)) / var(--n));
+  grid-auto-columns: calc(100% / var(--n));
   overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain;
 }
 .strips.scroll::-webkit-scrollbar { display: none; }
 .strips.scroll .strip { scroll-snap-align: start; }
 .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.pager span { font: 500 11px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.pager span { font: 500 11px/1 var(--mono); color: var(--sub); font-variant-numeric: tabular-nums; }
 .pg {
-  width: 44px; height: 34px; border-radius: 0; border: 1px solid var(--edge); background: var(--strip);
+  width: 44px; height: 34px; border-radius: 0; border: 0; background: var(--strip);
   color: var(--text); font: 700 20px/1 var(--display); cursor: pointer;
 }
-.pg:disabled { color: var(--dim); cursor: default; }
+.pg:disabled { color: var(--sub); cursor: default; }
 .pg:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
 
-/* Canal de TotalMix: nombre arriba, lectura de dB abajo, medidor a la izquierda y fader */
+/* Canal de TotalMix: nombre arriba, medidor y fader con escala, lectura de dB abajo.
+   Geometría en px tomada de la captura (75 px de ancho, 302 de alto): medidor x 7-23, escala dentro del medidor
+   y a su derecha, riel x 35-37, capuchón x 28-44. */
 .strip {
-  background: var(--strip); border: 1px solid var(--edge); border-radius: 0;
-  padding: 0 0 6px; display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 0; overflow: hidden;
+  background: var(--strip); border-right: 1px solid var(--edge); padding: 0 0 2px;
+  display: flex; flex-direction: column; align-items: stretch; min-width: 0; overflow: hidden;
 }
-.strip.me { outline: 2px solid var(--orange); outline-offset: -2px; }
-.strip .label {
-  order: -1; background: var(--strip); border-bottom: 1px solid var(--edge);
-  padding: 7px 3px 6px; font: 700 14px/1.1 var(--display); text-align: center; color: var(--text);
-  overflow-wrap: anywhere; min-height: 44px;
-}
-.strip.me .label { background: var(--talk); }
-.strip .label small { display: block; font: 400 10px/1.2 var(--mono); color: var(--dim); margin-top: 2px; }
-.strip .db {
-  order: 2; background: var(--ink); border: 1px solid var(--edge); margin: 0 4px;
-  padding: 4px 2px; font: 500 13px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--text);
-  text-align: center; min-width: 0; overflow: hidden; white-space: nowrap;
-}
-.strip .db small { color: var(--muted); font-weight: 400; font-size: 10px; margin-left: 2px; }
-.body { display: flex; justify-content: center; gap: 6px; height: min(52vh, 380px); min-height: 260px; padding: 4px 0 2px; }
-.meter { width: 6px; background: var(--well); position: relative; overflow: hidden; flex: none; margin-block: 10px; }
+.strip.me { box-shadow: inset 0 0 0 2px var(--orange); }
+.strip .label { padding: 4px 2px 0; text-align: center; min-height: 48px; }
+.strip .label b { display: block; font: 700 13px/14px var(--display); color: var(--text); overflow-wrap: anywhere; }
+.strip .label small { display: block; margin-top: 18px; font: 400 10px/12px var(--mono); color: var(--sub); }
+.strip .peak { margin: 41px 0 0 6px; font: 400 12px/14px var(--mono); color: var(--peak); font-variant-numeric: tabular-nums; min-height: 14px; white-space: nowrap; }
+.body { position: relative; height: clamp(200px, 50vh, 320px); min-height: 200px; margin-top: 4px; }
+.meter { position: absolute; left: 7px; width: 16px; top: 0; bottom: 0; background: var(--well); overflow: hidden; }
 .meter i {
   position: absolute; left: 0; right: 0; bottom: 0; height: 0%;
   background: linear-gradient(to top, var(--green) 0%, var(--green) 72%, var(--yellow) 86%, var(--red) 97%);
   background-size: 100% var(--h, 300px); background-position: bottom;
 }
-.fader { position: relative; width: 46px; flex: none; touch-action: none; cursor: grab; }
+/* Zona del fader: va a todo lo alto del canal (el dedo puede tocar en cualquier punto de la altura). */
+.fader { position: absolute; left: 20px; width: 44px; top: 0; bottom: 0; touch-action: none; cursor: grab; }
 .fader:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
-.fader .rail { position: absolute; left: 50%; top: 10px; bottom: 10px; width: 4px; transform: translateX(-50%); background: var(--rail); }
+.fader .rail { position: absolute; left: 14px; width: 4px; top: 10px; bottom: 10px; background: linear-gradient(90deg, var(--rail-edge), var(--rail) 50%, var(--rail-edge)); }
 .fader .fill { display: none; }
-.fader .tick { position: absolute; left: 0; width: 7px; height: 1px; background: var(--muted); }
-.fader .tick.zero { width: 14px; background: var(--text); height: 2px; }
-.fader .tick b { position: absolute; left: 10px; top: -5px; font: 400 9px/1 var(--mono); color: var(--muted); }
-.fader .tick.zero b { color: var(--text); left: 16px; top: -5px; }
+.fader .tick { position: absolute; left: 4px; width: 7px; height: 1px; background: var(--tick); }
+.fader .tick.zero { width: 7px; height: 1px; background: var(--tick); }
+.fader .tick b { position: absolute; left: -15px; width: 12px; top: -5px; text-align: center; font: 400 9px/1 var(--mono); color: var(--scale); }
+.fader .tick.zero b { color: var(--scale); }
 .fader .cap {
-  position: absolute; left: 4px; right: 4px; height: 26px; margin-bottom: -13px; border-radius: 0;
-  background: linear-gradient(180deg, #9aa1a8 0%, #848484 50%, #5f5f5f 100%);
-  box-shadow: 0 2px 4px #0008, inset 0 0 0 1px #2a2f35;
+  position: absolute; left: 8px; width: 16px; height: 26px; margin-bottom: -13px;
+  background: linear-gradient(180deg, #cacaca 0%, #a4a4a4 18%, #444 22%, #aeaeae 30%, #4d4d4d 36%, #cacaca 44%, #858585 60%, #6b6b6b 74%, #141414 80%, #aeaeae 90%, #6b6b6b 100%);
+  box-shadow: 0 1px 2px #000a;
 }
-.fader .cap::after { content: ""; position: absolute; left: 0; right: 0; top: 12px; height: 2px; background: #1d2327; }
-.foot { font: 400 11px/1.4 var(--mono); color: var(--dim); text-align: center; margin: 0; }
+.strip .db {
+  margin: 6px 0 0; background: var(--valbox); border-top: 1px solid var(--edge);
+  padding: 2px 4px; font: 400 13px/15px var(--mono); font-variant-numeric: tabular-nums; color: var(--value);
+  text-align: center; min-width: 0; overflow: hidden; white-space: nowrap;
+}
+
+.foot { font: 400 11px/1.4 var(--mono); color: var(--sub); text-align: center; margin: 0; }
 
 @media (prefers-reduced-motion: reduce) { .who { transition: none; } }
 </style>

@@ -138,7 +138,7 @@ async function showMix(id) {
     $(`cap-${i}`).style.opacity = has ? 1 : 0.35;
     $(`fill-${i}`).style.height = `calc(${has ? v : 0} * (100% - 20px))`;
     const d = has ? faderToDb(v) : null;
-    $(`db-${i}`).innerHTML = has ? fmtDb(d) + '<small>dB</small>' : '—';
+    $(`db-${i}`).textContent = has ? fmtDb(d) : '—';
     f.setAttribute('aria-valuenow', has ? Math.round(v * 100) : 0);
     f.setAttribute('aria-valuetext', has ? fmtDb(d) + ' dB' : 'sin dato');
   };
@@ -180,20 +180,23 @@ async function showMix(id) {
     });
   };
 
+  const labelHtml = (c) => `<b>${esc(c.label)}</b><small>${esc(c.sub)}</small>`;
+  const peakText = (c) => (c.level == null ? '—' : fmtDb(c.level));
   const stripHtml = (c, i) => `
       <div class="strip ${i === 0 ? 'me' : ''}">
-        <div class="db" id="db-${i}"></div>
+        <div class="label" id="lab-${i}">${labelHtml(c)}</div>
+        <div class="peak" id="pk-${i}">${peakText(c)}</div>
         <div class="body">
           <div class="meter"><i id="m-${i}"></i></div>
           <div class="fader" id="fader-${i}" tabindex="0" role="slider" aria-label="${esc(c.label)}" aria-valuemin="0" aria-valuemax="100">
             <div class="rail"></div>
-            ${[6, -6, -10, -20, -40, -60].map((d) => `<div class="tick" style="bottom:calc(10px + ${dbPos(d)} * (100% - 20px))"><b>${Math.abs(d)}</b></div>`).join('')}
+            ${[-6, -10, -20, -40, -60].map((d) => `<div class="tick" style="bottom:calc(10px + ${dbPos(d)} * (100% - 20px))"><b>${Math.abs(d)}</b></div>`).join('')}
             <div class="tick zero" style="bottom:calc(10px + ${ZERO} * (100% - 20px))"><b>0</b></div>
             <div class="fill" id="fill-${i}"></div>
             <div class="cap" id="cap-${i}"></div>
           </div>
         </div>
-        <div class="label" id="lab-${i}">${esc(c.label)}<small>${esc(c.sub)}</small></div>
+        <div class="db" id="db-${i}"></div>
       </div>`;
 
   const bodyHtml = (chs) => {
@@ -235,6 +238,7 @@ async function showMix(id) {
     keys = chs.map((c) => c.key);
     $('body').innerHTML = bodyHtml(chs);
     keys.forEach((_, i) => { render(i); bindStrip(i); });
+    chs.forEach((c, i) => { const pk = $(`pk-${i}`); if (pk) pk.textContent = peakText(c); });
     bindPager();
     const box = $('strips');
     if (box) box.scrollLeft = prev;
@@ -279,8 +283,10 @@ async function showMix(id) {
     if (!same) mount(chs); // se añadieron, quitaron o reordenaron canales: repintar conservando valores
     chs.forEach((c, i) => {
       const lab = $(`lab-${i}`);
-      const html = `${esc(c.label)}<small>${esc(c.sub)}</small>`;
+      const html = labelHtml(c);
       if (lab && lab.innerHTML !== html) lab.innerHTML = html;
+      const pk = $(`pk-${i}`);
+      if (pk) pk.textContent = peakText(c);
       const f = $(`fader-${i}`);
       if (f) f.setAttribute('aria-label', c.label ?? '');
       const k = c.key;
