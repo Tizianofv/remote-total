@@ -43,4 +43,26 @@ function decodeMessage(buf) {
   return { address: a.str, args };
 }
 
-module.exports = { encodeMessage, decodeMessage };
+// Un paquete UDP de TotalMix llega como bundle OSC: "#bundle\0", timetag de 8 bytes y
+// elementos [int32 tamaño][contenido], donde el contenido puede ser un mensaje o otro bundle.
+// Devuelve todos los mensajes del paquete. Nunca lanza: un elemento mal formado se salta
+// (un tamaño que se sale del paquete corta el bundle ahí) y los mensajes anteriores se conservan.
+function decodePackets(buf, out = []) {
+  try {
+    if (buf.length >= 16 && buf.toString('ascii', 0, 8) === '#bundle\0') {
+      let off = 16;
+      while (off + 4 <= buf.length) {
+        const size = buf.readInt32BE(off);
+        off += 4;
+        if (size < 0 || off + size > buf.length) break; // elemento truncado: lo que sigue no es fiable
+        decodePackets(buf.subarray(off, off + size), out);
+        off += size;
+      }
+    } else if (buf.length > 0 && buf[0] === 0x2f) { // '/': mensaje suelto
+      out.push(decodeMessage(buf));
+    }
+  } catch { /* paquete mal formado: quedan los mensajes ya leídos */ }
+  return out;
+}
+
+module.exports = { encodeMessage, decodeMessage, decodePackets };

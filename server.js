@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const dgram = require('dgram');
-const { encodeMessage, decodeMessage } = require('./osc');
+const { encodeMessage, decodePackets } = require('./osc');
 const { channelLabel, dbToFader } = require('./ufx');
 
 const DRY_RUN = process.argv.includes('--dry-run');
@@ -123,7 +123,9 @@ function mixView(role) {
 
 // ---- OSC hacia TotalMix ----
 const sock = dgram.createSocket('udp4');
-sock.on('message', (buf) => { try { onOsc(decodeMessage(buf)); } catch {} });
+sock.on('message', (buf) => {
+  for (const m of decodePackets(buf)) { try { onOsc(m); } catch {} }
+});
 sock.on('error', (e) => { console.error('Error en el puerto OSC:', e.message); process.exit(1); });
 
 function send(address, value) {

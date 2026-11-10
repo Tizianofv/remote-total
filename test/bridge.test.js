@@ -7,7 +7,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
-const { encodeMessage, decodeMessage } = require('../osc');
+const { encodeMessage, decodeMessage, decodePackets } = require('../osc');
 const ufx = require('../ufx');
 
 const SERVER = path.join(__dirname, '..', 'server.js');
@@ -19,6 +19,16 @@ function pad(str) {
   return out;
 }
 const oscString = (addr, s) => Buffer.concat([pad(addr), pad(',s'), pad(s)]);
+const message = (addr, arg) => (typeof arg === 'string' ? oscString(addr, arg) : encodeMessage(addr, [arg]));
+
+// Bundle OSC como lo envía TotalMix: "#bundle\0", timetag y elementos [int32 tamaño][contenido].
+const BUNDLE_HEADER = Buffer.concat([pad('#bundle'), Buffer.from([0, 0, 0, 0, 0, 0, 0, 1])]);
+const element = (content, extra = 0) => {
+  const size = Buffer.alloc(4);
+  size.writeInt32BE(content.length + extra);
+  return Buffer.concat([size, content]);
+};
+const bundle = (...contents) => Buffer.concat([BUNDLE_HEADER, ...contents.map((c) => element(c))]);
 
 async function eventually(fn, ms = 3000) {
   const end = Date.now() + ms;
@@ -74,9 +84,9 @@ async function startBridge() {
     port, totalmix: { host: '127.0.0.1', port: tm.address().port, listenPort },
   }).catch((e) => { tm.close(); throw e; });
   const client = dgram.createSocket('udp4');
-  const reply = (addr, arg) => new Promise((r) => client.send(
-    typeof arg === 'string' ? oscString(addr, arg) : encodeMessage(addr, [arg]),
-    listenPort, '127.0.0.1', r));
+  // Todo llega como paquete UDP con bundle, igual que TotalMix real.
+  const raw = (buf) => new Promise((r) => client.send(buf, listenPort, '127.0.0.1', r));
+  const reply = (addr, arg) => raw(bundle(message(addr, arg)));
   const url = (p) => app.url(p);
   const get = async (p) => (await fetch(app.url(p))).json();
   const post = (p, body) => fetch(app.url(p), { method: 'POST', body: typeof body === 'string' ? body : JSON.stringify(body) });
@@ -87,7 +97,7 @@ async function startBridge() {
       if (!received.some((m) => m.address === '/sendall' && m.args[0] === 2)) throw new Error('falta /sendall 2');
     });
   } catch (e) { stop(); throw e; }
-  return { received, reply, get, post, last, url, stop };
+  return { received, reply, raw, get, post, last, url, stop };
 }
 
 // Lo que respondería TotalMix: nombres, estéreo, principal, oculta, y faders activos.
@@ -116,6 +126,39 @@ test('codifica un float OSC según la especificación', () => {
   assert.strictEqual(buf.length, 20);
   assert.deepStrictEqual([...buf.subarray(16)], [0x3f, 0x00, 0x00, 0x00]);
   assert.deepStrictEqual(decodeMessage(buf), { address: '/1/volume1', args: [0.5] });
+});
+
+test('paquete con bundle: entrega todos los mensajes en orden', () => {
+  const pkt = bundle(message('/a', 1), message('/b', 'x'), message('/c', 0.5));
+  assert.deepStrictEqual(decodePackets(pkt), [
+    { address: '/a', args: [1] }, { address: '/b', args: ['x'] }, { address: '/c', args: [0.5] },
+  ]);
+});
+
+test('bundle anidado: entrega los mensajes de dentro y de los bundles hijos', () => {
+  const inner = bundle(message('/in/1', 2));
+  const pkt = bundle(message('/top', 1), inner, message('/last', 3));
+  assert.deepStrictEqual(decodePackets(pkt).map((m) => m.address), ['/top', '/in/1', '/last']);
+});
+
+test('bundle con elemento truncado: conserva los anteriores y no entrega el truncado', () => {
+  const pkt = Buffer.concat([BUNDLE_HEADER, element(message('/ok', 1)), element(message('/bad', 2), 8)]);
+  assert.deepStrictEqual(decodePackets(pkt), [{ address: '/ok', args: [1] }]);
+});
+
+test('elemento con contenido roto se salta y los siguientes siguen', () => {
+  const broken = Buffer.concat([pad('/x'), pad(',f')]); // float que falta
+  const pkt = Buffer.concat([BUNDLE_HEADER, element(message('/a', 1)), element(broken), element(message('/b', 2))]);
+  assert.deepStrictEqual(decodePackets(pkt).map((m) => m.address), ['/a', '/b']);
+});
+
+test('paquete basura no lanza y no entrega nada', () => {
+  assert.deepStrictEqual(decodePackets(Buffer.from([1, 2, 3])), []);
+  assert.deepStrictEqual(decodePackets(Buffer.from('#bundle\0', 'ascii')), []);
+});
+
+test('mensaje suelto (sin bundle) sigue leyéndose', () => {
+  assert.deepStrictEqual(decodePackets(message('/x', 0.25)), [{ address: '/x', args: [0.25] }]);
 });
 
 test('decodifica argumentos s (UTF-8), i y f', () => {
@@ -211,6 +254,30 @@ test('flujo en vivo (SSE) entrega el mismo rol que /api/mix', async () => {
     assert.strictEqual(data.name, 'Batería');
     assert.strictEqual(data.out, 'AN 1');
     assert.deepStrictEqual(data.channels.map((c) => c.key), ['in-0', 'pb-0']);
+  } finally { b.stop(); }
+});
+
+test('servidor: procesa todos los mensajes de un bundle y sobrevive a paquetes rotos', async () => {
+  const b = await startBridge();
+  try {
+    await b.raw(bundle(
+      message('/output/0/name', 'Piano'), message('/output/1/name', 'Cantante'),
+      message('/controlroom/mainout', 9),
+    ));
+    await eventually(async () => assert.deepStrictEqual((await b.get('/api/musicians')).map((r) => r.name), ['Piano', 'Cantante']));
+
+    // bundle anidado con un elemento truncado (declara 8 bytes de más): lo anterior cuenta, lo truncado no
+    await b.raw(Buffer.concat([
+      BUNDLE_HEADER,
+      element(bundle(message('/output/2/name', 'Guitarra'))),
+      element(message('/output/3/name', 'Fantasma'), 8),
+    ]));
+    await eventually(async () => assert.ok((await b.get('/api/musicians')).some((r) => r.name === 'Guitarra')));
+    assert.ok(!(await b.get('/api/musicians')).some((r) => r.name === 'Fantasma'));
+
+    await b.raw(Buffer.from([9, 9, 9, 9, 9]));
+    await b.raw(Buffer.from('#bundle\0', 'ascii'));
+    assert.strictEqual((await fetch(b.url('/api/musicians'))).status, 200);
   } finally { b.stop(); }
 });
 
