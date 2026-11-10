@@ -65,12 +65,17 @@ function fsExit() {
     if (p && p.catch) p.catch(() => {});
   } catch {}
 }
-function fsLabel() { return fsEl() ? 'Salir' : 'Completa'; }
+// Icono en línea (sin librerías): cuatro esquinas hacia afuera = entrar; hacia adentro = salir.
+const FS_ENTER = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M4 9V4h5M4 4l6 6M20 9V4h-5M20 4l-6 6M4 15v5h5M4 20l6-6M20 15v5h-5M20 20l-6-6"/></svg>';
+const FS_EXIT = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><path d="M9 4v5H4M9 9L3 3M15 4v5h5M15 9l6-6M9 20v-5H4M9 15l-6 6M15 20v-5h5M15 15l6 6"/></svg>';
+const fsAttrs = () => (fsEl() ? { label: 'Salir de pantalla completa', icon: FS_EXIT } : { label: 'Pantalla completa', icon: FS_ENTER });
 function fsSync() {
   const b = $('fsbtn');
   if (!b) return;
-  b.textContent = fsLabel();
-  b.setAttribute('aria-pressed', fsEl() ? 'true' : 'false');
+  const a = fsAttrs();
+  b.innerHTML = a.icon;
+  b.setAttribute('aria-label', a.label);
+  b.setAttribute('title', a.label);
 }
 if (fsSupported) {
   const onBtn = (e) => !!(e.target.closest && e.target.closest('#fsbtn'));
@@ -94,7 +99,7 @@ if (fsSupported) {
 function header(extra = '') {
   return `<div class="top">
     <div class="brand"><b>Remote</b> Total</div>
-    <div class="topr">${fsSupported ? `<button class="fs" id="fsbtn" type="button" aria-pressed="${fsEl() ? 'true' : 'false'}">${fsLabel()}</button>` : ''}<div class="status" id="status"><span class="dot"></span><span id="stxt">TotalMix</span></div></div>
+    <div class="topr">${fsSupported ? `<button class="fs" id="fsbtn" type="button" aria-label="${fsAttrs().label}" title="${fsAttrs().label}">${fsAttrs().icon}</button>` : ''}<div class="status" id="status"><span class="dot"></span><span id="stxt">TotalMix</span></div></div>
   </div>${extra}`;
 }
 function setStatus(ok, text) {
