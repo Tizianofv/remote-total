@@ -35,7 +35,7 @@ En la consola aparece la dirección, por ejemplo `http://192.168.1.20:8080`. Cad
 ### config.json (modo global)
 
 - `output`: salida de la mezcla del rol, por nombre: `"AN 1"`, `"AN 9/10"`, `"ADAT 3"`.
-- `channels[]`: `{ "label": "Yo", "input": "AN 9" }` para entradas, `{ "label": "Pista", "playback": "AN 1/2" }` para reproducciones del DAW.
+- `channels[]`: `{ "label": "Yo", "input": "AN 9" }` para entradas, `{ "label": "Pista", "playback": "AN 1/2" }` para reproducciones del DAW. **Sin `label`**, el fader usa el nombre que el canal tiene en TotalMix (por ejemplo "MIC 1") y se actualiza solo si lo cambias allá.
 - `useTotalMixNames`: si es `true`, el rol muestra el nombre que la salida tiene en TotalMix (por ejemplo "DRUMMER").
 - `mode`: `"global"` (TotalMix 2.1+) o `"classic"` (TotalMix 1.x, ver historial del repo).
 

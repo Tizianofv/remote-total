@@ -12,8 +12,8 @@
       "id": "voz", "name": "Voz", "output": "AN 1",
       "channels": [
         { "label": "Yo", "input": "AN 9" },
-        { "label": "Guitarra", "input": "AN 11" },
-        { "label": "Bajo", "input": "AN 12" },
+        { "input": "AN 11" },
+        { "input": "AN 12" },
         { "label": "Pista", "playback": "AN 1/2" },
         { "label": "Click", "playback": "AN 3/4" }
       ]

@@ -45,7 +45,7 @@ function normalize(cfg) {
         const kind = c.input !== undefined ? 'in' : c.playback !== undefined ? 'pb' : null;
         if (!kind) throw new Error(`En "${m.id}", el fader "${c.label}" necesita "input" o "playback"`);
         const src = kind === 'in' ? c.input : c.playback;
-        r.channels.push({ label: c.label, kind, idx: channelIndex(src), src: String(src) });
+        r.channels.push({ label: (c.label || '').trim(), kind, idx: channelIndex(src), src: String(src) });
       } else {
         if (!CLASSIC_BUS[c.bus]) throw new Error(`bus inválido en ${m.id}: ${c.bus}`);
         if (!(c.fader >= 1 && c.fader <= 16)) throw new Error(`fader fuera de 1..16 en ${m.id}`);
@@ -153,7 +153,11 @@ function mixView(r) {
     channels: r.channels.map((c, i) => {
       const v = MODE === 'global' ? values[nodeKey(c.kind, c.idx, r.out)] : classicValues[`${r.id}|${i}`];
       const lv = MODE === 'global' ? levels[`${c.kind}|${c.idx}`] : undefined;
-      return { label: c.label, sub: c.src, value: v ?? null, level: lv ?? null };
+      // Sin "label" en config.json: se usa el nombre del canal en TotalMix.
+      const tm = MODE === 'global' ? names[`${c.kind === 'in' ? 'input' : 'playback'}|${c.idx}`] : null;
+      const label = c.label || (tm && tm.trim()) || c.src;
+      const sub = c.label && tm && tm.trim() && tm.trim() !== c.label ? tm.trim() : c.src;
+      return { label, sub, value: v ?? null, level: lv ?? null };
     }),
   };
 }
@@ -182,7 +186,7 @@ const server = http.createServer((req, res) => {
     let last = '';
     const t = setInterval(() => {
       const v = mixView(r);
-      const msg = JSON.stringify({ name: v.name, values: v.channels.map((c) => c.value), levels: v.channels.map((c) => c.level) });
+      const msg = JSON.stringify({ name: v.name, labels: v.channels.map((c) => [c.label, c.sub]), values: v.channels.map((c) => c.value), levels: v.channels.map((c) => c.level) });
       if (msg !== last) { res.write(`data: ${msg}\n\n`); last = msg; }
     }, 80);
     req.on('close', () => clearInterval(t));

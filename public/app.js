@@ -14,7 +14,8 @@ function faderToDb(lin) {
   const db = pos >= 649 ? pos * 0.0320855615 - 26.8235294118 : pos * pos * (-1 / 11033) + pos * 0.1497326203 - 65;
   return db < -64.9 ? -Infinity : db;
 }
-const ZERO = (0 + 26.8235294118) / 0.0320855615 / 1023; // posición de 0 dB
+const dbPos = (d) => Math.min(1, Math.max(0, (d >= -6 ? (d + 26.8235294118) / 0.0320855615 : 826 - Math.sqrt(-34869 - 11033 * d)) / 1023));
+const ZERO = dbPos(0); // posición de 0 dB
 const fmtDb = (d) => (d === -Infinity ? '−∞' : (d > 0.05 ? '+' : d < -0.05 ? '−' : '') + Math.abs(d).toFixed(1));
 const levelToMeter = (db) => (db == null || !Number.isFinite(db) ? 0 : Math.min(1, Math.max(0, (db + 60) / 60)));
 
@@ -96,13 +97,13 @@ async function showMix(id) {
           <div class="meter"><i id="m-${i}"></i></div>
           <div class="fader" id="fader-${i}" tabindex="0" role="slider" aria-label="${esc(c.label)}" aria-valuemin="0" aria-valuemax="100">
             <div class="rail"></div>
-            ${[0.15, 0.3, 0.45, 0.6, 0.9].map((t) => `<div class="tick" style="bottom:calc(10px + ${t} * (100% - 20px))"></div>`).join('')}
-            <div class="tick zero" style="bottom:calc(10px + ${ZERO} * (100% - 20px))"></div>
+            ${[6, -6, -10, -20, -40, -60].map((d) => `<div class="tick" style="bottom:calc(10px + ${dbPos(d)} * (100% - 20px))"><b>${Math.abs(d)}</b></div>`).join('')}
+            <div class="tick zero" style="bottom:calc(10px + ${ZERO} * (100% - 20px))"><b>0</b></div>
             <div class="fill" id="fill-${i}"></div>
             <div class="cap" id="cap-${i}"></div>
           </div>
         </div>
-        <div class="label">${esc(c.label)}<small>${esc(c.sub)}</small></div>
+        <div class="label" id="lab-${i}">${esc(c.label)}<small>${esc(c.sub)}</small></div>
       </div>`).join('')}
     </div>
     <p id="err"></p>
@@ -189,6 +190,11 @@ async function showMix(id) {
     setStatus(true, 'Conectado');
     const d = JSON.parse(ev.data);
     if (d.name) document.getElementById('title').textContent = d.name;
+    (d.labels || []).forEach(([l, sub], i) => {
+      const el = document.getElementById(`lab-${i}`);
+      const html = `${esc(l)}<small>${esc(sub)}</small>`;
+      if (el && el.innerHTML !== html) el.innerHTML = html;
+    });
     d.values.forEach((v, i) => {
       if (v != null && Date.now() > touched[i] && v !== val[i]) { val[i] = v; render(i); }
     });

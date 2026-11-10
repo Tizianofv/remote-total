@@ -44,7 +44,7 @@ async function startBridge(cfg) {
 test('Global OSC: 8 músicos a la vez, una orden directa por fader, y lee lo que devuelve TotalMix', async () => {
   const musicians = Array.from({ length: 8 }, (_, i) => ({
     id: 'm' + i, name: 'Músico ' + i, output: i < 6 ? `AN ${i + 1}` : `AN ${i === 6 ? '9/10' : '11/12'}`,
-    channels: [{ label: 'Yo', input: `AN ${i + 1}` }, { label: 'Pista', playback: 'AN 1/2' }],
+    channels: [{ input: `AN ${i + 1}` }, { label: 'Pista', playback: 'AN 1/2' }],
   }));
   const b = await startBridge({ mode: 'global', useTotalMixNames: true, musicians });
   try {
@@ -71,11 +71,13 @@ test('Global OSC: 8 músicos a la vez, una orden directa por fader, y lee lo que
         : encodeMessage(addr, [v]),
     ]), b.listenPort, '127.0.0.1', r));
     await reply('/output/0/name', 'Batería');
+    await reply('/input/0/name', 'MIC 1');
     await reply('/mix/pb/0/0/faderlin', 0.25);
     s.close();
     await new Promise((r) => setTimeout(r, 100));
     const mix = await (await fetch(`http://127.0.0.1:${b.port}/api/mix?m=m0`)).json();
     assert.strictEqual(mix.name, 'Batería');
+    assert.strictEqual(mix.channels[0].label, 'MIC 1');
     assert.ok(Math.abs(mix.channels[1].value - 0.25) < 1e-6);
   } finally { b.stop(); }
 });
