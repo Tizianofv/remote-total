@@ -120,6 +120,7 @@ function leave() {
 async function showPicker() {
   leave();
   const g = gen;
+  app.classList.remove('mix');
   let timer = 0;
   let shown = null; // firma de la lista pintada: solo se repinta si cambia
   cleanup = () => clearTimeout(timer);
@@ -179,6 +180,7 @@ async function showMix(id) {
   store('rol', id);
   history.replaceState(null, '', '?m=' + encodeURIComponent(id));
 
+  app.classList.add('mix');
   app.innerHTML = header(`
     <div class="mixhead">
       <div>
