@@ -121,6 +121,7 @@ async function showPicker() {
   leave();
   const g = gen;
   let timer = 0;
+  let shown = null; // firma de la lista pintada: solo se repinta si cambia
   cleanup = () => clearTimeout(timer);
   history.replaceState(null, '', location.pathname);
   app.innerHTML = header() + `
@@ -138,20 +139,26 @@ async function showPicker() {
       if (g !== gen) return;
       setStatus(true, 'Conectado');
       const grid = $('grid');
-      if (!list.length) {
-        // TotalMix aún no ha respondido: reintentar hasta que haya roles.
-        grid.innerHTML = `<p class="hint" style="padding:22px 0 0">
-          <b style="display:block;font:800 18px/1.2 var(--f-title);text-transform:uppercase;letter-spacing:.04em;color:var(--fg);margin-bottom:6px">Esperando a TotalMix…</b>
-          Los roles son las salidas de TotalMix.</p>`;
-        timer = setTimeout(load, 3000);
-        return;
+      $('err').textContent = '';
+      // Se vuelve a pedir cada 3 s; solo se repinta si cambió algo (id, nombre o salida), para no perder el toque.
+      const sig = JSON.stringify(list.map((m) => [m.id, m.name, m.out]));
+      if (sig !== shown) {
+        shown = sig;
+        if (!list.length) {
+          // TotalMix aún no ha respondido: esperar a que haya roles.
+          grid.innerHTML = `<p class="hint" style="padding:22px 0 0">
+            <b style="display:block;font:800 18px/1.2 var(--f-title);text-transform:uppercase;letter-spacing:.04em;color:var(--fg);margin-bottom:6px">Esperando a TotalMix…</b>
+            Los roles son las salidas de TotalMix.</p>`;
+        } else {
+          grid.innerHTML = list.map((m) => `
+            <button class="who" data-id="${esc(m.id)}">
+              <span class="name">${esc(m.name)}</span>
+              <span class="out">${esc(m.out)}</span>
+            </button>`).join('');
+          grid.querySelectorAll('.who').forEach((b) => (b.onclick = () => showMix(b.dataset.id)));
+        }
       }
-      grid.innerHTML = list.map((m) => `
-        <button class="who" data-id="${esc(m.id)}">
-          <span class="name">${esc(m.name)}</span>
-          <span class="out">${esc(m.out)}</span>
-        </button>`).join('');
-      grid.querySelectorAll('.who').forEach((b) => (b.onclick = () => showMix(b.dataset.id)));
+      timer = setTimeout(load, 3000);
     } catch {
       if (g !== gen) return;
       setStatus(false, 'Sin conexión');
@@ -377,6 +384,8 @@ async function showMix(id) {
   const es = new EventSource('/api/stream?m=' + encodeURIComponent(id));
   es.onopen = () => setStatus(true, 'Conectado');
   es.onerror = () => setStatus(false, 'Reconectando…');
+  // El rol dejó de existir en TotalMix: volver a la lista de roles y olvidar el rol recordado.
+  es.addEventListener('gone', () => { store('rol', null); showPicker(); });
   es.onmessage = (ev) => {
     setStatus(true, 'Conectado');
     let d;
